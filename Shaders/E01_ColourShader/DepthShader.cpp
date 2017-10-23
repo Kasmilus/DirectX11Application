@@ -1,13 +1,13 @@
-#include "SkyboxShader.h"
+#include "DepthShader.h"
 
 
-SkyboxShader::SkyboxShader(ID3D11Device* device, HWND hwnd) : BaseShader(device, hwnd)
+DepthShader::DepthShader(ID3D11Device* device, HWND hwnd) : BaseShader(device, hwnd)
 {
-	initShader(L"skybox_vs.cso", L"skybox_ps.cso");
+	initShader(L"depth_vs.cso", L"depth_ps.cso");
 }
 
 
-SkyboxShader::~SkyboxShader()
+DepthShader::~DepthShader()
 {
 	// Release the matrix constant buffer.
 	if (matrixBuffer)
@@ -28,7 +28,7 @@ SkyboxShader::~SkyboxShader()
 }
 
 
-void SkyboxShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
+void DepthShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 {
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
@@ -57,19 +57,10 @@ void SkyboxShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 
 	// Create the texture sampler state.
 	renderer->CreateSamplerState(&samplerDesc, &sampleState);
-
-	//// Rasterizer
-	//rasterizerDesc.CullMode = D3D11_CULL_NONE;
-
-	//renderer->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
-
-	//// Stencil
-	//stencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-	//renderer->CreateDepthStencilState(&stencilDesc, &stencilState);
 }
 
 
-void SkyboxShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* texture)
+void DepthShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -101,7 +92,4 @@ void SkyboxShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 
 	// Now set the constant buffer in the vertex shader with the updated values.
 	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &matrixBuffer);
-
-	// Set shader texture resource in the pixel shader.
-	deviceContext->PSSetShaderResources(0, 1, &texture);
 }

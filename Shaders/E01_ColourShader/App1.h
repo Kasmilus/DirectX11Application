@@ -8,6 +8,7 @@
 #include "ColourShader.h"
 #include "SkyboxShader.h"
 #include "ObjectShader.h"
+#include "DepthShader.h"
 
 class App1 : public BaseApplication
 {
@@ -21,10 +22,14 @@ public:
 
 protected:
 	bool render();
+	void renderToTexture();
+	void renderGUITexture();
+	void renderScene();
 	void gui();
 
 private:
-	ColourShader* colourShader;
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, orthoMatrix, orthoViewMatrix;
+
 	SkyboxShader* skyboxShader;
 	ObjectShader* objectShader;	// Uses dwarf.obj, use head.obj later to show tesellation on
 
@@ -33,6 +38,12 @@ private:
 	BaseMesh* objectMesh;
 
 	Light* pointLight;
+
+	// Render texture - post processing
+	ColourShader* colourShader;
+	DepthShader* depthShader;
+	RenderTexture* depthTexture;
+	OrthoMesh* orthoMesh;
 
 	
 };

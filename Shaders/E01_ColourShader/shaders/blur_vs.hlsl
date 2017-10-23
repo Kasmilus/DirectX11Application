@@ -1,4 +1,6 @@
-// For simple texture rendering
+// colour vertex shader
+// Simple geometry pass
+// texture coordinates and normals will be ignored.
 
 cbuffer MatrixBuffer : register(cb0)
 {
@@ -11,12 +13,14 @@ struct InputType
 {
 	float4 position : POSITION;
 	float2 tex : TEXCOORD0;
+	float3 normal : NORMAL;
 };
 
 struct OutputType
 {
 	float4 position : SV_POSITION;
 	float2 tex : TEXCOORD0;
+	float3 normal : NORMAL;
 };
 
 OutputType main(InputType input)
@@ -34,6 +38,10 @@ OutputType main(InputType input)
 
 	// Store the texture coordinates for the pixel shader.
 	output.tex = input.tex;
+
+	// Store normals for the pixel shader
+	output.normal = mul(input.normal, (float3x3)worldMatrix);
+	output.normal = normalize(output.normal);
 
 	return output;
 }

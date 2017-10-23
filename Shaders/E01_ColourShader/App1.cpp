@@ -40,7 +40,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	textureMgr->loadTexture("brick_roughness", L"../res/PBR/BlocksRough/blocksrough_roughness.png");
 
 	// SHADERS
-	colourShader = new ColourShader(renderer->getDevice(), hwnd);
+	//colourShader = new ColourShader(renderer->getDevice(), hwnd);
 	skyboxShader = new SkyboxShader(renderer->getDevice(), hwnd);
 	objectShader = new ObjectShader(renderer->getDevice(), hwnd);
 
@@ -49,6 +49,17 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	pointLight->setAmbientColour(0.1f, 0.1f, 0.1f, 1.0f);
 	pointLight->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
 	pointLight->setPosition(-1.5f, -1.0f, -0.2f);
+
+
+	// Render to texture
+	// OrthoMesh and shader set for different renderTarget
+	depthTexture = new RenderTexture(renderer->getDevice(), screenWidth, screenHeight, SCREEN_NEAR, SCREEN_DEPTH);
+	// ortho size and position set based on window size
+	// 200x200 pixels (standard would be matching window size for fullscreen mesh
+	// Position default at 0x0 centre window, to offset change values (pixel)
+	orthoMesh = new OrthoMesh(renderer->getDevice(), renderer->getDeviceContext(), 200, 150, -300, 225);
+	colourShader = new ColourShader(renderer->getDevice(), hwnd);
+	depthShader = new DepthShader(renderer->getDevice(), hwnd);
 }
 
 
@@ -115,22 +126,58 @@ bool App1::frame()
 
 bool App1::render()
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
-
-	//// Clear the scene. (default blue colour)
-	renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
-
-	//// Generate the view matrix based on the camera's position.
+	
 	camera->update();
+	// ortho matrix for 2D rendering
+	orthoMatrix = renderer->getOrthoMatrix();
+	orthoViewMatrix = camera->getOrthoViewMatrix();
 
-	//// Get the world, view, projection, and ortho matrices from the camera and Direct3D objects.
+	// Generate the view matrix based on the camera's position.
+	renderToTexture();
+
+	renderScene();
+
+	return true;
+}
+
+void App1::renderToTexture()
+{
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	// Set the render target to be the render to texture.
+	depthTexture->setRenderTarget(renderer->getDeviceContext());
+	// Clear the render to texture.
+	depthTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
+	// Get the world, view, and projection matrices from the camera and d3d objects.
 	worldMatrix = renderer->getWorldMatrix();
 	viewMatrix = camera->getViewMatrix();
 	projectionMatrix = renderer->getProjectionMatrix();
+	
 
+	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
+	objectMesh->sendData(renderer->getDeviceContext());
+	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix);
+	depthShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
+	// Render floor
+	worldMatrix = XMMatrixTranslation(-50, -5, -20);
+	floorMesh->sendData(renderer->getDeviceContext());
+	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix);
+	depthShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
+
+	// Reset the render target back to the original back buffer and not the render to texture anymore.
+	renderer->setBackBufferRenderTarget();
+}
+
+void App1::renderScene()
+{
+	//// Clear the scene. (default blue colour)
+	renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
+	// Get the world, view, and projection matrices from the camera and d3d objects.
+	worldMatrix = renderer->getWorldMatrix();
+	viewMatrix = camera->getViewMatrix();
+	projectionMatrix = renderer->getProjectionMatrix();
 	// Render objects
 
-	// Render floor
+	// Render object
 	objectMesh->sendData(renderer->getDeviceContext());
 	objectShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
 	objectShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
@@ -151,13 +198,26 @@ bool App1::render()
 	// Render object (combination of mesh geometry and shader process
 	skyboxShader->render(renderer->getDeviceContext(), skyboxMesh->getIndexCount());
 
+	// Render GUI texture
+	renderGUITexture();
+
 	// Render GUI
-	gui();
+	//gui();
 
 	//// Present the rendered scene to the screen.
 	renderer->endScene();
+}
 
-	return true;
+void App1::renderGUITexture() {
+	// To render ortho mesh
+	// Turn off the Z buffer to begin all 2D rendering.
+	renderer->setZBuffer(false);
+
+	orthoMesh->sendData(renderer->getDeviceContext());
+	colourShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, depthTexture->getShaderResourceView());
+	colourShader->render(renderer->getDeviceContext(), orthoMesh->getIndexCount());
+
+	renderer->setZBuffer(true);
 }
 
 void App1::gui()

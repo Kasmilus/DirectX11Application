@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Resource Files\Post Processing">
+      <UniqueIdentifier>{61f00d3d-9b1d-4dfa-be68-7720c4542671}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App1.cpp">
@@ -33,6 +36,12 @@
     <ClCompile Include="ObjectShader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DepthShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlurShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h">
@@ -50,14 +59,14 @@
     <ClInclude Include="ObjectShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DepthShader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BlurShader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shaders\colour_ps.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\colour_vs.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
     <FxCompile Include="shaders\skybox_ps.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
@@ -69,6 +78,24 @@
     </FxCompile>
     <FxCompile Include="shaders\object_vs.hlsl">
       <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\colour_ps.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\colour_vs.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\blur_ps.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\blur_vs.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\depth_ps.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\depth_vs.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

@@ -1,7 +1,4 @@
-// Colour shader.h
-// Simple shader example.
-#ifndef _COLOURSHADER_H_
-#define _COLOURSHADER_H_
+#pragma once
 
 #include "../DXFramework/BaseShader.h"
 
@@ -9,13 +6,13 @@ using namespace std;
 using namespace DirectX;
 
 
-class ColourShader : public BaseShader
+class BlurShader : public BaseShader
 {
 
 public:
 
-	ColourShader(ID3D11Device* device, HWND hwnd);
-	~ColourShader();
+	BlurShader(ID3D11Device* device, HWND hwnd);
+	~BlurShader();
 
 	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture);
 
@@ -24,6 +21,7 @@ private:
 
 private:
 	ID3D11Buffer* matrixBuffer;
+	ID3D11RasterizerState* rasterizerState;
+	ID3D11DepthStencilState* stencilState;
 };
 
-#endif
