@@ -1,6 +1,4 @@
-// colour vertex shader
-// Simple geometry pass
-// texture coordinates and normals will be ignored.
+// Gaussian blur shader
 
 cbuffer MatrixBuffer : register(cb0)
 {
@@ -76,5 +74,6 @@ OutputType main(InputType input)
 
 	output.isHorizontal = isHorizontal;
 
-	return output;
+	return output;
+
 }

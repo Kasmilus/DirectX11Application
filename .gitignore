@@ -57,6 +57,7 @@ artifacts/
 *.ilk
 *.meta
 *.obj
+!Shaders/res/*.obj
 *.pch
 *.pdb
 *.pgc

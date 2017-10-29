@@ -88,20 +88,24 @@
     <ClCompile Include="App1.cpp" />
     <ClCompile Include="BlurShader.cpp" />
     <ClCompile Include="ColourShader.cpp" />
+    <ClCompile Include="DepthOfField.cpp" />
     <ClCompile Include="DepthShader.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ObjectShader.cpp" />
     <ClCompile Include="SkyboxMesh.cpp" />
     <ClCompile Include="SkyboxShader.cpp" />
+    <ClCompile Include="TextureManagerCubemap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h" />
     <ClInclude Include="BlurShader.h" />
     <ClInclude Include="ColourShader.h" />
+    <ClInclude Include="DepthOfField.h" />
     <ClInclude Include="DepthShader.h" />
     <ClInclude Include="ObjectShader.h" />
     <ClInclude Include="SkyboxMesh.h" />
     <ClInclude Include="SkyboxShader.h" />
+    <ClInclude Include="TextureManagerCubemap.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DXFramework\DXFramework.vcxproj">
@@ -130,6 +134,12 @@
     </FxCompile>
     <FxCompile Include="shaders\depth_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\DOF_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\DOF_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="shaders\object_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>

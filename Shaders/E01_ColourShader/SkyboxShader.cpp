@@ -54,18 +54,18 @@ void SkyboxShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 
 	// Create the texture sampler state.
 	renderer->CreateSamplerState(&samplerDesc, &sampleState);
 
-	//// Rasterizer
-	//rasterizerDesc.CullMode = D3D11_CULL_NONE;
+	// Rasterizer
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
+	renderer->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
 
-	//renderer->CreateRasterizerState(&rasterizerDesc, &rasterizerState);
-
-	//// Stencil
-	//stencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-	//renderer->CreateDepthStencilState(&stencilDesc, &stencilState);
+	// Stencil
+	stencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	renderer->CreateDepthStencilState(&stencilDesc, &stencilState);
 }
 
 

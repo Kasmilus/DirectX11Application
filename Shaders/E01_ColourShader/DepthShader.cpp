@@ -31,13 +31,14 @@ DepthShader::~DepthShader()
 void DepthShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 {
 	D3D11_BUFFER_DESC matrixBufferDesc;
+	D3D11_BUFFER_DESC depthOfFieldBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
-	D3D11_RASTERIZER_DESC rasterizerDesc;
-	D3D11_DEPTH_STENCIL_DESC stencilDesc;
 
 	// Load (+ compile) shader files
 	loadVertexShader(vsFilename);
 	loadPixelShader(psFilename);
+
+	// --- MATRIX --- //
 
 	// Setup the description of the dynamic matrix constant buffer that is in the vertex shader.
 	matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -50,6 +51,19 @@ void DepthShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
 
+	// --- DEPTH OF FIELD --- //
+
+	// Setup the description of the dynamic matrix constant buffer that is in the vertex shader.
+	depthOfFieldBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	depthOfFieldBufferDesc.ByteWidth = sizeof(MatrixBufferType);
+	depthOfFieldBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	depthOfFieldBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	depthOfFieldBufferDesc.MiscFlags = 0;
+	depthOfFieldBufferDesc.StructureByteStride = 0;
+
+	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
+	renderer->CreateBuffer(&depthOfFieldBufferDesc, NULL, &DepthOfFieldBuffer);
+
 	// Create a texture sampler state description.
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -60,12 +74,12 @@ void DepthShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 }
 
 
-void DepthShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix)
+void DepthShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix,float focalDistance, float focalRange)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType* dataPtr;
-	unsigned int bufferNumber;
+	DepthOfFieldBufferType* dataPtrDOF;
 	XMMATRIX tworld, tview, tproj;
 
 	// Transpose the matrices to prepare them for the shader.
@@ -80,16 +94,21 @@ void DepthShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const 
 	dataPtr = (MatrixBufferType*)mappedResource.pData;
 
 	// Copy the matrices into the constant buffer.
-	dataPtr->world = tworld;// worldMatrix;
+	dataPtr->world = tworld;
 	dataPtr->view = tview;
 	dataPtr->projection = tproj;
 
 	// Unlock the constant buffer.
 	deviceContext->Unmap(matrixBuffer, 0);
 
-	// Set the position of the constant buffer in the vertex shader.
-	bufferNumber = 0;
-
 	// Now set the constant buffer in the vertex shader with the updated values.
-	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &matrixBuffer);
+	deviceContext->VSSetConstantBuffers(0, 1, &matrixBuffer);
+
+	result = deviceContext->Map(DepthOfFieldBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	dataPtrDOF = (DepthOfFieldBufferType*)mappedResource.pData;
+	dataPtrDOF->focalDistance = focalDistance;
+	dataPtrDOF->focalRange = focalRange;
+	deviceContext->Unmap(DepthOfFieldBuffer, 0);
+	deviceContext->PSSetConstantBuffers(0, 1, &DepthOfFieldBuffer);
+
 }

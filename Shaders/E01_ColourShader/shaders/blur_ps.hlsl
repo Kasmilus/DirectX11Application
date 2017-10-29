@@ -1,9 +1,8 @@
 /*
-	Depth of field blur - gaussian blur pixels which are really close and far away
+	Gaussian blur the scene
 	Do that in 2 passes. First horizontal then vertical
 */
 Texture2D shaderTexture : register(t0);
-Texture2D depthTexture : register(t1);
 SamplerState SampleType : register(s0);
 
 struct InputType
@@ -28,23 +27,18 @@ struct InputType
 float4 main(InputType input) : SV_TARGET
 {
 	float4 colour;
-	float depth;
 	
-	// Get depth of this pixel
-	depth = depthTexture.Sample(SampleType, input.tex).x;
-
 	// Weights
-	// SHOULD change depending on depth value!!!!
 	float weight0 = 0.382928f;
 	float weight1 = 0.241732f;
 	float weight2 = 0.060598f;
 	float weight3 = 0.006206f;
 
 	// Get pixel colour
+	
 	colour = shaderTexture.Sample(SampleType, input.tex) * weight0;
 
-	/*if (depth < 0.3f  || depth > 0.7f)
-	{*/
+
 	if (input.isHorizontal == 1) {
 		colour += shaderTexture.Sample(SampleType, input.texCoordUp3) * weight3;
 		colour += shaderTexture.Sample(SampleType, input.texCoordUp2) * weight2;
@@ -63,8 +57,6 @@ float4 main(InputType input) : SV_TARGET
 		colour += shaderTexture.Sample(SampleType, input.texCoordRight3) * weight3;
 	}
 		
-	//}
-
 
 	// Set the alpha channel to one.
 	colour.a = 1.0f;

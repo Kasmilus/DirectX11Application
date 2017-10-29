@@ -30,7 +30,6 @@ private:
 private:
 	ID3D11Buffer* matrixBuffer;
 	ID3D11Buffer* screenSizeBuffer;
-	ID3D11RasterizerState* rasterizerState;
-	ID3D11DepthStencilState* stencilState;
+
 };
 

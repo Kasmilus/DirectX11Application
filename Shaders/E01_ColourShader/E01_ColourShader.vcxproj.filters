@@ -16,6 +16,9 @@
     <Filter Include="Resource Files\Post Processing">
       <UniqueIdentifier>{61f00d3d-9b1d-4dfa-be68-7720c4542671}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shaders">
+      <UniqueIdentifier>{7f5968aa-dabc-4b74-aab5-887a341dc0e2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App1.cpp">
@@ -24,23 +27,29 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ColourShader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="SkyboxShader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SkyboxMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ObjectShader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DepthShader.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="ColourShader.cpp">
+      <Filter>Source Files\Shaders</Filter>
     </ClCompile>
     <ClCompile Include="BlurShader.cpp">
+      <Filter>Source Files\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="ObjectShader.cpp">
+      <Filter>Source Files\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureManagerCubemap.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DepthOfField.cpp">
+      <Filter>Source Files\Shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -59,11 +68,17 @@
     <ClInclude Include="ObjectShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TextureManagerCubemap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthOfField.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="DepthShader.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BlurShader.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -79,12 +94,6 @@
     <FxCompile Include="shaders\object_vs.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\colour_ps.hlsl">
-      <Filter>Resource Files\Post Processing</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\colour_vs.hlsl">
-      <Filter>Resource Files\Post Processing</Filter>
-    </FxCompile>
     <FxCompile Include="shaders\blur_ps.hlsl">
       <Filter>Resource Files\Post Processing</Filter>
     </FxCompile>
@@ -95,6 +104,18 @@
       <Filter>Resource Files\Post Processing</Filter>
     </FxCompile>
     <FxCompile Include="shaders\depth_vs.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\DOF_ps.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\colour_ps.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\colour_vs.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\DOF_vs.hlsl">
       <Filter>Resource Files\Post Processing</Filter>
     </FxCompile>
   </ItemGroup>

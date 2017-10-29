@@ -12,7 +12,7 @@ struct InputType
 
 float4 main(InputType input) : SV_TARGET
 {
-	float4 colour = shaderTexture.Sample(SampleType, input.position);
+	float4 colour = shaderTexture.Sample(SampleType, input.tex);
 
 	return colour;
 }
