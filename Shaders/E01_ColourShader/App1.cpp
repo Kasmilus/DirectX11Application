@@ -27,12 +27,9 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	textureManagerCubemap->loadCubemapTexture("default", L"../res/brick1.dds");
 
 	// MESHES
-	// Skybox
 	skyboxMesh = new SkyboxMesh(renderer->getDevice(), renderer->getDeviceContext());
-	// Floor
-	floorMesh = new PlaneMesh(renderer->getDevice(), renderer->getDeviceContext());
-	// Object
-	objectMesh = new Model(renderer->getDevice(), renderer->getDeviceContext(), "../res/dwarf.obj");
+	floorMesh = new MyTesselationPlane(renderer->getDevice(), renderer->getDeviceContext());
+	objectMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/dwarf.obj");
 
 	// Textures
 	textureMgr->loadTexture("object_base", L"../res/PBR/RustedIron/rustediron-streaks_basecolor.png");
@@ -44,6 +41,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	textureMgr->loadTexture("brick_normal", L"../res/PBR/BlocksRough/blocksrough_normal.png");
 	textureMgr->loadTexture("brick_metallic", L"../res/PBR/BlocksRough/blocksrough_metallic.png");
 	textureMgr->loadTexture("brick_roughness", L"../res/PBR/BlocksRough/blocksrough_roughness.png");
+	textureMgr->loadTexture("brick_height", L"../res/PBR/BlocksRough/blocksrough_height.png");
 
 	textureManagerCubemap->loadCubemapTexture("skybox", L"../res/skybox.dds");
 
@@ -51,6 +49,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	//colourShader = new ColourShader(renderer->getDevice(), hwnd);
 	skyboxShader = new SkyboxShader(renderer->getDevice(), hwnd);
 	objectShader = new ObjectShader(renderer->getDevice(), hwnd);
+	floorShader = new DisplacementShader(renderer->getDevice(), hwnd);
 
 	// LIGHTS
 	pointLight = new Light();
@@ -116,6 +115,11 @@ App1::~App1()
 	{
 		delete objectShader;
 		objectShader = 0;
+	}
+	if (floorShader)
+	{
+		delete floorShader;
+		floorShader = 0;
 	}
 
 	if (textureManagerCubemap)
@@ -211,8 +215,8 @@ void App1::renderSceneToTexture()
 	// Render floor
 	worldMatrix = XMMatrixTranslation(-50, -5, -20);
 	floorMesh->sendData(renderer->getDeviceContext());
-	objectShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"));
-	objectShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
+	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"));
+	floorShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
 
 	// Render skybox
 	worldMatrix = XMMatrixTranslation(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
@@ -222,6 +226,26 @@ void App1::renderSceneToTexture()
 
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
 	renderer->setBackBufferRenderTarget();
+}
+
+void App1::renderSceneToScreen()
+{
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	worldMatrix = renderer->getWorldMatrix();
+	viewMatrix = camera->getViewMatrix();
+	projectionMatrix = renderer->getProjectionMatrix();
+
+	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
+	// Render object
+	objectMesh->sendData(renderer->getDeviceContext());
+	objectShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
+	objectShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
+
+	// Render floor
+	worldMatrix = XMMatrixTranslation(-50, -5, -20);
+	floorMesh->sendData(renderer->getDeviceContext());
+	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"));
+	floorShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
 }
 
 void App1::renderFinalPostProcessing()
@@ -267,10 +291,17 @@ void App1::renderScene()
 	projectionMatrix = renderer->getProjectionMatrix();
 
 	// Render GUI texture
-	renderGUITexture();
+	if (!renderer->getWireframeState())
+	{
+		renderGUITexture();
+	}
+	else
+	{
+		renderSceneToScreen();
+	}
 
 	// Render GUI
-	//gui();
+	gui();
 
 	//// Present the rendered scene to the screen.
 	renderer->endScene();
@@ -310,7 +341,17 @@ void App1::gui()
 	renderer->getDeviceContext()->GSSetShader(NULL, NULL, 0);
 
 	// Build UI
-	ImGui::Text("FPS: %.2f", timer->getFPS());
+	ImGui::Text("FPS: %.2f\n", timer->getFPS());
+	ImGui::Text("Toggle wire frame mode: I\n");
+	ImGui::Text("Toggle post-processing effects: P\n");
+	if (postProcessingOn)
+	{
+		ImGui::Text("Depth of field:\n");
+		ImGui::Text("	Change focal distance: <-K L->\n");
+		ImGui::Text("	Focal distance: %.2f\n", focalDistance);
+		ImGui::Text("	Change focal range: <-N M->\n");
+		ImGui::Text("	Focal range: %.2f\n", focalRange);
+	}
 
 	// Render UI
 	ImGui::Render();
@@ -357,5 +398,12 @@ void App1::ControlScene()
 		postProcessingOn = !postProcessingOn;
 	}
 	wasPKeyDownLastFrame = input->isKeyDown('P');
+
+	// Toggle wire frame mode
+	if (input->isKeyDown('I') && !wasIKeyDownLastFrame)
+	{
+		renderer->setWireframeMode(!renderer->getWireframeState());
+	}
+	wasIKeyDownLastFrame = input->isKeyDown('I');
 }
 

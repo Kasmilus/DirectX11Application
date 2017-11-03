@@ -90,7 +90,11 @@
     <ClCompile Include="ColourShader.cpp" />
     <ClCompile Include="DepthOfField.cpp" />
     <ClCompile Include="DepthShader.cpp" />
+    <ClCompile Include="DisplacementShader.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MyBaseMesh.cpp" />
+    <ClCompile Include="MyModelMesh.cpp" />
+    <ClCompile Include="MyTesselationPlane.cpp" />
     <ClCompile Include="ObjectShader.cpp" />
     <ClCompile Include="SkyboxMesh.cpp" />
     <ClCompile Include="SkyboxShader.cpp" />
@@ -102,6 +106,10 @@
     <ClInclude Include="ColourShader.h" />
     <ClInclude Include="DepthOfField.h" />
     <ClInclude Include="DepthShader.h" />
+    <ClInclude Include="DisplacementShader.h" />
+    <ClInclude Include="MyBaseMesh.h" />
+    <ClInclude Include="MyModelMesh.h" />
+    <ClInclude Include="MyTesselationPlane.h" />
     <ClInclude Include="ObjectShader.h" />
     <ClInclude Include="SkyboxMesh.h" />
     <ClInclude Include="SkyboxShader.h" />
@@ -133,6 +141,18 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="shaders\depth_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\displacement_ds.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Domain</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\displacement_hs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Hull</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\displacement_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\displacement_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="shaders\DOF_vs.hlsl">

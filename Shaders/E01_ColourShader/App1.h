@@ -5,13 +5,19 @@
 // Includes
 #include "../DXFramework/DXF.h"
 #include "TextureManagerCubemap.h"
+// Include Meshes
+#include "MyBaseMesh.h"
 #include "SkyboxMesh.h"
+#include "MyTesselationPlane.h"
+#include "MyModelMesh.h"
+// Include Shaders
 #include "ColourShader.h"
 #include "SkyboxShader.h"
 #include "ObjectShader.h"
 #include "DepthShader.h"
 #include "BlurShader.h"
 #include "DepthOfField.h"
+#include "DisplacementShader.h"
 
 class App1 : public BaseApplication
 {
@@ -27,6 +33,7 @@ protected:
 	bool render();
 	void renderDepthToTexture();
 	void renderSceneToTexture();
+	void renderSceneToScreen();	// used when wire frame is on
 	void renderFinalPostProcessing();
 	void renderGUITexture();
 	void renderScene();
@@ -42,10 +49,11 @@ private:
 
 	SkyboxShader* skyboxShader;
 	ObjectShader* objectShader;	// Uses dwarf.obj, use head.obj later to show tessellation on
+	DisplacementShader* floorShader;	// Using height map
 
 	BaseMesh* skyboxMesh;	// Zmienic pozniej zeby nie renderowalo 2 stron skoro i tak tylko 1 widac bedzie
-	BaseMesh* floorMesh;
-	BaseMesh* objectMesh;
+	MyBaseMesh* floorMesh;
+	MyBaseMesh* objectMesh;
 
 	Light* pointLight;
 
@@ -71,6 +79,7 @@ private:
 
 	bool postProcessingOn = false;
 	bool wasPKeyDownLastFrame = false;
+	bool wasIKeyDownLastFrame = false;
 
 };
 

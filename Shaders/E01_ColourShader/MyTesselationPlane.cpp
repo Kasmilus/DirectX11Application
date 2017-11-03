@@ -1,23 +1,21 @@
-// plane mesh
-// Quad mesh made of many quads. Default is 100x100
-#include "planemesh.h"
+#include "MyTesselationPlane.h"
 
 // Initialise buffer and load texture.
-PlaneMesh::PlaneMesh(ID3D11Device* device, ID3D11DeviceContext* deviceContext, int lresolution)
+MyTesselationPlane::MyTesselationPlane(ID3D11Device* device, ID3D11DeviceContext* deviceContext, int lresolution)
 {
 	resolution = lresolution;
 	initBuffers(device);
 }
 
 // Release resources.
-PlaneMesh::~PlaneMesh()
+MyTesselationPlane::~MyTesselationPlane()
 {
 	// Run parent deconstructor
-	BaseMesh::~BaseMesh();
+	MyBaseMesh::~MyBaseMesh();
 }
 
 // Generate plane (including texture coordinates and normals).
-void PlaneMesh::initBuffers(ID3D11Device* device)
+void MyTesselationPlane::initBuffers(ID3D11Device* device)
 {
 	VertexType* vertices;
 	unsigned long* indices;
@@ -25,7 +23,7 @@ void PlaneMesh::initBuffers(ID3D11Device* device)
 	float positionX, positionZ, u, v, increment;
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
 	D3D11_SUBRESOURCE_DATA vertexData, indexData;
-	
+
 	// Calculate the number of vertices in the terrain mesh.
 	vertexCount = (resolution - 1) * (resolution - 1) * 8;
 
@@ -33,17 +31,17 @@ void PlaneMesh::initBuffers(ID3D11Device* device)
 	indexCount = vertexCount;
 	vertices = new VertexType[vertexCount];
 	indices = new unsigned long[indexCount];
-	
+
 
 	index = 0;
 	// UV coords.
 	u = 0;
 	v = 0;
 	increment = 1.0f / resolution;
-	
-	for (j = 0; j<(resolution - 1); j++)
+
+	for (j = 0; j < (resolution - 1); j++)
 	{
-		for (i = 0; i<(resolution - 1); i++)
+		for (i = 0; i < (resolution - 1); i++)
 		{
 			// Upper left.
 			positionX = (float)i;
@@ -73,7 +71,7 @@ void PlaneMesh::initBuffers(ID3D11Device* device)
 			// lower left
 			positionX = (float)(i);
 			positionZ = (float)(j + 1);
-			
+
 
 			vertices[index].position = XMFLOAT3(positionX, 0.0f, positionZ);
 			vertices[index].texture = XMFLOAT2(u, v + increment);
@@ -120,7 +118,7 @@ void PlaneMesh::initBuffers(ID3D11Device* device)
 			index++;
 
 			u += increment;
-	
+
 		}
 
 		u = 0;
@@ -140,7 +138,7 @@ void PlaneMesh::initBuffers(ID3D11Device* device)
 	vertexData.SysMemSlicePitch = 0;
 	// Now create the vertex buffer.
 	device->CreateBuffer(&vertexBufferDesc, &vertexData, &vertexBuffer);
-	
+
 	// Set up the description of the static index buffer.
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	indexBufferDesc.ByteWidth = sizeof(unsigned long)* indexCount;
@@ -154,10 +152,26 @@ void PlaneMesh::initBuffers(ID3D11Device* device)
 	indexData.SysMemSlicePitch = 0;
 	// Create the index buffer.
 	device->CreateBuffer(&indexBufferDesc, &indexData, &indexBuffer);
-	
+
 	// Release the arrays now that the buffers have been created and loaded.
 	delete[] vertices;
 	vertices = 0;
 	delete[] indices;
 	indices = 0;
+}
+
+
+// Override sendData() to change topology type. Control point patch list is required for tessellation.
+void MyTesselationPlane::sendData(ID3D11DeviceContext* deviceContext)
+{
+	unsigned int stride;
+	unsigned int offset;
+
+	stride = sizeof(VertexType);
+	offset = 0;
+
+	deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+	deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	// Set the type of primitive that should be rendered from this vertex buffer, in this case control patch for tessellation.
+	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
 }
