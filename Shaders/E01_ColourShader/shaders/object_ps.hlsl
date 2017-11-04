@@ -67,6 +67,7 @@ float4 main(InputType input) : SV_TARGET
 	float4 lightingColour = saturate(baseColour * lightDiffuseColour * lightIntensity);
 	specular = specular * metallic;
 	float4 colour = saturate(lightingColour + specular + ambientColour);
-	//colour = float4(normal, 1);
+	colour = float4(input.tangent, 1);
+	//colour = float4(input.tex, 0, 1);
 	return colour;
 }

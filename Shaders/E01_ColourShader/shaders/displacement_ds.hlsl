@@ -1,11 +1,20 @@
 // Tessellation domain shader
 // After tessellation the domain shader processes the all the vertices
 
+Texture2D displacementTexture : register(t0);
+SamplerState SampleType : register(s0);
+
 cbuffer MatrixBuffer : register(cb0)
 {
     matrix worldMatrix;
     matrix viewMatrix;
     matrix projectionMatrix;
+};
+
+cbuffer CameraBuffer : register(cb1)
+{
+	float3 cameraPosition;
+	float padding;
 };
 
 struct ConstantOutputType
@@ -16,14 +25,21 @@ struct ConstantOutputType
 
 struct InputType
 {
-    float3 position : POSITION;
-    float4 colour : COLOR;
+	float4 position : SV_POSITION;
+	float2 tex : TEXCOORD0;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float3 binormal : BINORMAL;
 };
 
 struct OutputType
 {
-    float4 position : SV_POSITION;
-    float4 colour : COLOR;
+	float4 position : SV_POSITION;
+	float2 tex : TEXCOORD0;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float3 binormal : BINORMAL;
+	float3 viewDirection : TEXCOORD1;
 };
 
 [domain("tri")]
@@ -32,18 +48,31 @@ OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, c
     float3 vertexPosition;
     OutputType output;
  
-    // Determine the position of the new vertex.
-	// Invert the y and Z components of uvwCoord as these coords are generated in UV space and therefore y is positive downward.
-	// Alternatively you can set the output topology of the hull shader to cw instead of ccw (or vice versa).
+    // Determine variables for new vertices
 	vertexPosition = uvwCoord.x * patch[0].position + uvwCoord.y * patch[1].position + uvwCoord.z * patch[2].position;
-    
-    // Calculate the position of the new vertex against the world, view, and projection matrices.
-    output.position = mul(float4(vertexPosition, 1.0f), worldMatrix);
-    output.position = mul(output.position, viewMatrix);
-    output.position = mul(output.position, projectionMatrix);
+	output.tex = uvwCoord.x * patch[0].tex + uvwCoord.y * patch[1].tex + uvwCoord.z * patch[2].tex;
+	output.normal = uvwCoord.x * patch[0].normal + uvwCoord.y * patch[1].normal + uvwCoord.z * patch[2].normal;
+	output.tangent = uvwCoord.x * patch[0].tangent + uvwCoord.y * patch[1].tangent + uvwCoord.z * patch[2].tangent;
+	output.binormal = uvwCoord.x * patch[0].binormal + uvwCoord.y * patch[1].binormal + uvwCoord.z * patch[2].binormal;
 
-    // Send the input color into the pixel shader.
-    output.colour = patch[0].colour;
+	output.normal = normalize(output.normal);
+
+	// --- DISPLACEMENT MAPPING --- //
+	// Choose mipmap level
+	const float mipInterval = 20.0f;
+	float dist = distance(vertexPosition, cameraPosition);
+	float mipLevel = clamp( (dist - mipInterval) / mipInterval, 0.0f, 6.0f );
+	// Sample displacement map
+	float height = displacementTexture.SampleLevel(SampleType, output.tex, mipLevel).x;
+	// Offset vertex along the normal
+	vertexPosition += float4((4 * (height - 1.0f)) * output.normal, 0.0f);
+
+
+	// Calculate the position of the new vertex against the world, view, and projection matrices.
+	output.position = mul(float4(vertexPosition, 1.0f), worldMatrix);
+	output.viewDirection = normalize(cameraPosition - output.position);	// Set view direction
+	output.position = mul(output.position, viewMatrix);
+	output.position = mul(output.position, projectionMatrix);
 
     return output;
 }

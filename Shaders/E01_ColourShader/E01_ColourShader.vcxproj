@@ -98,7 +98,6 @@
     <ClCompile Include="ObjectShader.cpp" />
     <ClCompile Include="SkyboxMesh.cpp" />
     <ClCompile Include="SkyboxShader.cpp" />
-    <ClCompile Include="TextureManagerCubemap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h" />
@@ -113,7 +112,6 @@
     <ClInclude Include="ObjectShader.h" />
     <ClInclude Include="SkyboxMesh.h" />
     <ClInclude Include="SkyboxShader.h" />
-    <ClInclude Include="TextureManagerCubemap.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DXFramework\DXFramework.vcxproj">
@@ -148,9 +146,6 @@
     </FxCompile>
     <FxCompile Include="shaders\displacement_hs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Hull</ShaderType>
-    </FxCompile>
-    <FxCompile Include="shaders\displacement_ps.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="shaders\displacement_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>

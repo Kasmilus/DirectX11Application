@@ -4,7 +4,6 @@
 
 // Includes
 #include "../DXFramework/DXF.h"
-#include "TextureManagerCubemap.h"
 // Include Meshes
 #include "MyBaseMesh.h"
 #include "SkyboxMesh.h"
@@ -43,9 +42,6 @@ protected:
 private:
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, orthoMatrix, orthoViewMatrix;
 	float screenWidth, screenHeight;
-
-	// Framework extensions
-	TextureManagerCubemap* textureManagerCubemap;
 
 	SkyboxShader* skyboxShader;
 	ObjectShader* objectShader;	// Uses dwarf.obj, use head.obj later to show tessellation on

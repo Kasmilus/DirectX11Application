@@ -48,9 +48,6 @@
     <ClCompile Include="ObjectShader.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="TextureManagerCubemap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DepthOfField.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
@@ -75,9 +72,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureManagerCubemap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ColourShader.h">
@@ -155,9 +149,6 @@
       <Filter>Resource Files</Filter>
     </FxCompile>
     <FxCompile Include="shaders\displacement_hs.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\displacement_ps.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
     <FxCompile Include="shaders\displacement_vs.hlsl">

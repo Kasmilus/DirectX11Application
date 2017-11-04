@@ -22,16 +22,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	this->screenWidth = screenWidth;
 	this->screenHeight = screenHeight;
 
-	// Initialise texture manager
-	textureManagerCubemap = new TextureManagerCubemap(renderer->getDevice(), renderer->getDeviceContext());
-	textureManagerCubemap->loadCubemapTexture("default", L"../res/brick1.dds");
-
-	// MESHES
-	skyboxMesh = new SkyboxMesh(renderer->getDevice(), renderer->getDeviceContext());
-	floorMesh = new MyTesselationPlane(renderer->getDevice(), renderer->getDeviceContext());
-	objectMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/dwarf.obj");
-
-	// Textures
+	
+	// TEXTURES
 	textureMgr->loadTexture("object_base", L"../res/PBR/RustedIron/rustediron-streaks_basecolor.png");
 	textureMgr->loadTexture("object_normal", L"../res/PBR/RustedIron/rustediron-streaks_normal.png");
 	textureMgr->loadTexture("object_metallic", L"../res/PBR/RustedIron/rustediron-streaks_metallic.png");
@@ -43,7 +35,12 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	textureMgr->loadTexture("brick_roughness", L"../res/PBR/BlocksRough/blocksrough_roughness.png");
 	textureMgr->loadTexture("brick_height", L"../res/PBR/BlocksRough/blocksrough_height.png");
 
-	textureManagerCubemap->loadCubemapTexture("skybox", L"../res/skybox.dds");
+	textureMgr->loadTexture("skybox", L"../res/skybox.dds");
+
+	// MESHES
+	skyboxMesh = new SkyboxMesh(renderer->getDevice(), renderer->getDeviceContext());
+	floorMesh = new MyTesselationPlane(renderer->getDevice(), renderer->getDeviceContext());
+	objectMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/dwarf.obj");
 
 	// SHADERS
 	//colourShader = new ColourShader(renderer->getDevice(), hwnd);
@@ -120,12 +117,6 @@ App1::~App1()
 	{
 		delete floorShader;
 		floorShader = 0;
-	}
-
-	if (textureManagerCubemap)
-	{
-		delete textureManagerCubemap;
-		textureManagerCubemap = 0;
 	}
 }
 
@@ -221,7 +212,7 @@ void App1::renderSceneToTexture()
 	// Render skybox
 	worldMatrix = XMMatrixTranslation(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
 	skyboxMesh->sendData(renderer->getDeviceContext());
-	skyboxShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureManagerCubemap->getCubemapTexture("skybox"));
+	skyboxShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("skybox"));
 	skyboxShader->render(renderer->getDeviceContext(), skyboxMesh->getIndexCount());
 
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
@@ -320,7 +311,7 @@ void App1::renderGUITexture() {
 	{
 		targetResourceView = sceneTextureCurrent->getShaderResourceView();
 	}
-
+	
 	// ortho matrix for 2D rendering
 	orthoMatrix = renderer->getOrthoMatrix();
 	orthoViewMatrix = camera->getOrthoViewMatrix();
@@ -338,7 +329,7 @@ void App1::renderGUITexture() {
 void App1::gui()
 {
 	// Force turn off on Geometry shader
-	renderer->getDeviceContext()->GSSetShader(NULL, NULL, 0);
+	//renderer->getDeviceContext()->GSSetShader(NULL, NULL, 0);
 
 	// Build UI
 	ImGui::Text("FPS: %.2f\n", timer->getFPS());

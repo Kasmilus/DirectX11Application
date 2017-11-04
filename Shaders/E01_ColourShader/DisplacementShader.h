@@ -23,6 +23,13 @@ public:
 		XMFLOAT3 position;
 		float padding;
 	};
+	struct TessellationBufferType
+	{
+		float minTesselationDistance;
+		float maxTesselationDistance;
+		float minTesselationFactor;
+		float maxTesselationFactor;
+	};
 
 	DisplacementShader(ID3D11Device* device, HWND hwnd);
 	~DisplacementShader();
@@ -36,6 +43,7 @@ private:
 
 private:
 	ID3D11Buffer* matrixBuffer;
+	ID3D11Buffer* tessellationBuffer;
 	ID3D11Buffer* lightBuffer;
 	ID3D11Buffer* cameraBuffer;
 	ID3D11SamplerState* sampleState;

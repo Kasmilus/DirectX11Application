@@ -32,7 +32,6 @@ void MyTesselationPlane::initBuffers(ID3D11Device* device)
 	vertices = new VertexType[vertexCount];
 	indices = new unsigned long[indexCount];
 
-
 	index = 0;
 	// UV coords.
 	u = 0;

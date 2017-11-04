@@ -39,8 +39,8 @@ OutputType main(InputType input)
 	output.position = float4(output.position.x, output.position.y, output.position.w-0.000001f, output.position.w);	
 	
 	// Store the texture coordinates for the pixel shader.
-	//output.tex = input.position.xyz;
-	output.tex = float3(0.5,0.5,0.5);
+	output.tex = input.position.xyz;
+	//output.tex = float3(0.5,0.5,0.5);
 
 	return output;
 }
