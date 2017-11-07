@@ -1,13 +1,13 @@
 #pragma once
 
-#include "../DXFramework/BaseShader.h"
+#include "MyBaseShader.h"
 #include "../DXFramework/Light.h"
 
 using namespace std;
 using namespace DirectX;
 
 
-class ObjectShader : public BaseShader
+class ObjectShader : public MyBaseShader
 {
 
 public:
@@ -30,9 +30,6 @@ public:
 
 
 	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness);
-
-protected:
-	void loadVertexShader(WCHAR* filename);	// override to load tangent and binormal vectors
 
 private:
 	void initShader(WCHAR*, WCHAR*);

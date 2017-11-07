@@ -1,7 +1,7 @@
 #include "ObjectShader.h"
 
 
-ObjectShader::ObjectShader(ID3D11Device* device, HWND hwnd) : BaseShader(device, hwnd)
+ObjectShader::ObjectShader(ID3D11Device* device, HWND hwnd) : MyBaseShader(device, hwnd)
 {
 	initShader(L"object_vs.cso", L"object_ps.cso");
 }
@@ -24,104 +24,7 @@ ObjectShader::~ObjectShader()
 	}
 
 	//Release base shader components
-	BaseShader::~BaseShader();
-}
-
-void ObjectShader::loadVertexShader(WCHAR* filename)
-{
-	ID3DBlob* vertexShaderBuffer;
-	D3D11_INPUT_ELEMENT_DESC polygonLayout[5];
-	unsigned int numElements;
-
-	vertexShaderBuffer = 0;
-
-	// check file extension for correct loading function.
-	std::wstring fn(filename);
-	std::string::size_type idx;
-	std::wstring extension;
-
-	idx = fn.rfind('.');
-
-	if (idx != std::string::npos)
-	{
-		extension = fn.substr(idx + 1);
-	}
-	else
-	{
-		// No extension found
-		MessageBox(hwnd, L"Error finding vertex shader file", L"ERROR", MB_OK);
-		exit(0);
-	}
-
-	// Load the texture in.
-	if (extension != L"cso")
-	{
-		MessageBox(hwnd, L"Incorrect vertex shader file type", L"ERROR", MB_OK);
-		exit(0);
-	}
-
-	// Reads compiled shader into buffer (bytecode).
-	HRESULT result = D3DReadFileToBlob(filename, &vertexShaderBuffer);
-	if (result != S_OK)
-	{
-		MessageBox(NULL, filename, L"File ERROR", MB_OK);
-		exit(0);
-	}
-
-	// Create the vertex shader from the buffer.
-	renderer->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), NULL, &vertexShader);
-
-	// Create the vertex input layout description.
-	// This setup needs to match the VertexType stucture in the MeshClass and in the shader.
-	polygonLayout[0].SemanticName = "POSITION";
-	polygonLayout[0].SemanticIndex = 0;
-	polygonLayout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	polygonLayout[0].InputSlot = 0;
-	polygonLayout[0].AlignedByteOffset = 0;
-	polygonLayout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[0].InstanceDataStepRate = 0;
-
-	polygonLayout[1].SemanticName = "TEXCOORD";
-	polygonLayout[1].SemanticIndex = 0;
-	polygonLayout[1].Format = DXGI_FORMAT_R32G32_FLOAT;
-	polygonLayout[1].InputSlot = 0;
-	polygonLayout[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-	polygonLayout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[1].InstanceDataStepRate = 0;
-
-	polygonLayout[2].SemanticName = "NORMAL";
-	polygonLayout[2].SemanticIndex = 0;
-	polygonLayout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	polygonLayout[2].InputSlot = 0;
-	polygonLayout[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-	polygonLayout[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[2].InstanceDataStepRate = 0;
-
-	polygonLayout[3].SemanticName = "TANGENT";
-	polygonLayout[3].SemanticIndex = 0;
-	polygonLayout[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	polygonLayout[3].InputSlot = 0;
-	polygonLayout[3].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-	polygonLayout[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[3].InstanceDataStepRate = 0;
-
-	polygonLayout[4].SemanticName = "BINORMAL";
-	polygonLayout[4].SemanticIndex = 0;
-	polygonLayout[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	polygonLayout[4].InputSlot = 0;
-	polygonLayout[4].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-	polygonLayout[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[4].InstanceDataStepRate = 0;
-
-	// Get a count of the elements in the layout.
-	numElements = sizeof(polygonLayout) / sizeof(polygonLayout[0]);
-
-	// Create the vertex input layout.
-	renderer->CreateInputLayout(polygonLayout, numElements, vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), &layout);
-
-	// Release the vertex shader buffer and pixel shader buffer since they are no longer needed.
-	vertexShaderBuffer->Release();
-	vertexShaderBuffer = 0;
+	MyBaseShader::~MyBaseShader();
 }
 
 

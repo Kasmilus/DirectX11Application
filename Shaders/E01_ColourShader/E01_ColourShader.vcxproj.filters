@@ -69,6 +69,12 @@
     <ClCompile Include="MyModelMesh.cpp">
       <Filter>Source Files\Geometry</Filter>
     </ClCompile>
+    <ClCompile Include="DepthTesselationShader.cpp">
+      <Filter>Source Files\Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="MyBaseShader.cpp">
+      <Filter>Source Files\Shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App1.h">
@@ -105,6 +111,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MyModelMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthTesselationShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MyBaseShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -153,6 +165,12 @@
     </FxCompile>
     <FxCompile Include="shaders\displacement_vs.hlsl">
       <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\depthTessellation_ps.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\depthTessellation_ds.hlsl">
+      <Filter>Resource Files\Post Processing</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

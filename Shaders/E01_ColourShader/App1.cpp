@@ -52,7 +52,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	pointLight = new Light();
 	pointLight->setAmbientColour(0.1f, 0.1f, 0.1f, 1.0f);
 	pointLight->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
-	pointLight->setPosition(-1.5f, -1.0f, -0.2f);
+	pointLight->setPosition(-3.5f, 1.0f, -10.0f);
 
 
 	// Render to texture
@@ -62,6 +62,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	blurTextureDownSampled = new RenderTexture(renderer->getDevice(), screenWidth / 2, screenHeight / 2, SCREEN_NEAR, SCREEN_DEPTH);
 	blurTextureUpSampled = new RenderTexture(renderer->getDevice(), screenWidth, screenHeight, SCREEN_NEAR, SCREEN_DEPTH);
 	DOFTexture = new RenderTexture(renderer->getDevice(), screenWidth, screenHeight, SCREEN_NEAR, SCREEN_DEPTH);
+	shadowMapTexture = new RenderTexture(renderer->getDevice(), 1024, 1024, SCREEN_NEAR, SCREEN_DEPTH);
 
 
 	// ortho size and position set based on window size
@@ -72,6 +73,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	depthShader = new DepthShader(renderer->getDevice(), hwnd);
 	blurShader = new BlurShader(renderer->getDevice(), hwnd);
 	DOFShader = new DepthOfFieldShader(renderer->getDevice(), hwnd);
+	depthTesselationShader = new DepthTesselationShader(renderer->getDevice(), hwnd);
+
 }
 
 
@@ -118,6 +121,16 @@ App1::~App1()
 		delete floorShader;
 		floorShader = 0;
 	}
+	if (depthShader)
+	{
+		delete depthShader;
+		depthShader = 0;
+	}
+	if (depthTesselationShader)
+	{
+		delete depthTesselationShader;
+		depthTesselationShader = 0;
+	}
 }
 
 
@@ -146,14 +159,44 @@ bool App1::frame()
 
 bool App1::render()
 {
+	// Update camera and dynamic lights matrices
 	camera->update();
+	pointLight->generateProjectionMatrix(SCREEN_NEAR, SCREEN_DEPTH);
+	pointLight->generateViewMatrix();
 
+	// Shadow map
+	renderShadowMapToTexture();
+
+	// Scene
 	renderDepthToTexture();
 	renderSceneToTexture();
 
 	renderScene();
 
 	return true;
+}
+
+void App1::renderShadowMapToTexture()
+{
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	shadowMapTexture->setRenderTarget(renderer->getDeviceContext());
+	shadowMapTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
+	// get world view projection matrices
+	worldMatrix = renderer->getWorldMatrix();
+	viewMatrix = pointLight->getViewMatrix();
+	projectionMatrix = pointLight->getProjectionMatrix();
+	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
+	objectMesh->sendData(renderer->getDeviceContext());
+	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
+	depthShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
+	// Render floor
+	worldMatrix = XMMatrixTranslation(-50, -5, -20);
+	floorMesh->sendData(renderer->getDeviceContext());
+	depthTesselationShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
+	depthTesselationShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
+
+	// Reset the render target back to the original back buffer and not the render to texture anymore.
+	renderer->setBackBufferRenderTarget();
 }
 
 void App1::renderDepthToTexture()
@@ -175,9 +218,8 @@ void App1::renderDepthToTexture()
 	// Render floor
 	worldMatrix = XMMatrixTranslation(-50, -5, -20);
 	floorMesh->sendData(renderer->getDeviceContext());
-	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
-	depthShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
-
+	depthTesselationShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
+	depthTesselationShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
 	renderer->setBackBufferRenderTarget();
 }
@@ -206,8 +248,10 @@ void App1::renderSceneToTexture()
 	// Render floor
 	worldMatrix = XMMatrixTranslation(-50, -5, -20);
 	floorMesh->sendData(renderer->getDeviceContext());
-	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"));
+	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
 	floorShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
+	//depthTesselationShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
+	//depthTesselationShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
 
 	// Render skybox
 	worldMatrix = XMMatrixTranslation(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
@@ -235,7 +279,7 @@ void App1::renderSceneToScreen()
 	// Render floor
 	worldMatrix = XMMatrixTranslation(-50, -5, -20);
 	floorMesh->sendData(renderer->getDeviceContext());
-	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"));
+	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
 	floorShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
 }
 
@@ -306,9 +350,11 @@ void App1::renderGUITexture() {
 	if (postProcessingOn)
 	{
 		targetResourceView = DOFTexture->getShaderResourceView();
+		//targetResourceView = shadowMapTexture->getShaderResourceView();
 	}
 	else
 	{
+		//targetResourceView = shadowMapTexture->getShaderResourceView();
 		targetResourceView = sceneTextureCurrent->getShaderResourceView();
 	}
 	
@@ -334,6 +380,8 @@ void App1::gui()
 	// Build UI
 	ImGui::Text("FPS: %.2f\n", timer->getFPS());
 	ImGui::Text("Toggle wire frame mode: I\n");
+	ImGui::Text("Lighting: \n");
+	ImGui::Text("	Move point light: <-Z X->\n");
 	ImGui::Text("Toggle post-processing effects: P\n");
 	if (postProcessingOn)
 	{
@@ -350,6 +398,16 @@ void App1::gui()
 
 void App1::ControlScene()
 {
+	// Light controls
+	if (input->isKeyDown('X'))
+	{
+		pointLight->setPosition(pointLight->getPosition().x + timer->getTime() * 2, pointLight->getPosition().y + timer->getTime() * 2, pointLight->getPosition().z);
+	}
+	if (input->isKeyDown('Z'))
+	{
+		pointLight->setPosition(pointLight->getPosition().x - timer->getTime() * 2, pointLight->getPosition().y - timer->getTime() * 2, pointLight->getPosition().z);
+	}
+
 	// Post processing controls
 	if (postProcessingOn)
 	{

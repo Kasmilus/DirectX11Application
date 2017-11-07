@@ -1,7 +1,7 @@
 #include "DepthShader.h"
 
 
-DepthShader::DepthShader(ID3D11Device* device, HWND hwnd) : BaseShader(device, hwnd)
+DepthShader::DepthShader(ID3D11Device* device, HWND hwnd) : MyBaseShader(device, hwnd)
 {
 	initShader(L"depth_vs.cso", L"depth_ps.cso");
 }
@@ -24,7 +24,7 @@ DepthShader::~DepthShader()
 	}
 
 	//Release base shader components
-	BaseShader::~BaseShader();
+	MyBaseShader::~MyBaseShader();
 }
 
 

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../DXFramework/BaseShader.h"
+#include "MyBaseShader.h"
 
 using namespace std;
 using namespace DirectX;
 
 
-class DepthShader : public BaseShader
+class DepthShader : public MyBaseShader
 {
 
 public:

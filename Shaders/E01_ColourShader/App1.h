@@ -17,6 +17,7 @@
 #include "BlurShader.h"
 #include "DepthOfField.h"
 #include "DisplacementShader.h"
+#include "DepthTesselationShader.h"
 
 class App1 : public BaseApplication
 {
@@ -30,6 +31,7 @@ public:
 
 protected:
 	bool render();
+	void renderShadowMapToTexture();
 	void renderDepthToTexture();
 	void renderSceneToTexture();
 	void renderSceneToScreen();	// used when wire frame is on
@@ -53,9 +55,10 @@ private:
 
 	Light* pointLight;
 
-	// Render texture - post processing
+	// Render texture
 	ColourShader* colourShader;
 	DepthShader* depthShader;
+	DepthTesselationShader* depthTesselationShader;
 	BlurShader* blurShader;
 	DepthOfFieldShader* DOFShader;
 
@@ -64,6 +67,7 @@ private:
 	RenderTexture* blurTextureDownSampled;
 	RenderTexture* blurTextureUpSampled;
 	RenderTexture* DOFTexture;
+	RenderTexture* shadowMapTexture;
 
 	OrthoMesh* orthoMesh;
 
