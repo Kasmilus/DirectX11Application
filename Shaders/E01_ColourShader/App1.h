@@ -18,6 +18,7 @@
 #include "DepthOfField.h"
 #include "DisplacementShader.h"
 #include "DepthTesselationShader.h"
+#include "GeometryShader.h"
 
 class App1 : public BaseApplication
 {
@@ -48,10 +49,12 @@ private:
 	SkyboxShader* skyboxShader;
 	ObjectShader* objectShader;	// Uses dwarf.obj, use head.obj later to show tessellation on
 	DisplacementShader* floorShader;	// Using height map
+	GeometryShader* grassGeometryShader;
 
 	BaseMesh* skyboxMesh;	// Zmienic pozniej zeby nie renderowalo 2 stron skoro i tak tylko 1 widac bedzie
 	MyBaseMesh* floorMesh;
 	MyBaseMesh* objectMesh;
+	BaseMesh* grassGeometryMesh;
 
 	Light* pointLight;
 
@@ -70,6 +73,10 @@ private:
 	RenderTexture* shadowMapTexture;
 
 	OrthoMesh* orthoMesh;
+
+	float currentTime;
+	float windFreq;
+	float windStrength;
 
 	// Depth of field focus variables
 	float focalDistance = 0.48f;

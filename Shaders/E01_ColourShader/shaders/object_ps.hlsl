@@ -231,6 +231,7 @@ float4 main(InputType input) : SV_TARGET
 			normalSample = (normalSample * 2.0f) - 1.0f;
 			// Calculate normal for this fragment
 			float3 normal = (normalSample.x * input.tangent) + (normalSample.y * input.binormal) + (normalSample.z * input.normal);
+			//normal = normalSample;
 			normal = normalize(normal);
 
 			// ----- NORMAL MAPPING ----- //
@@ -261,7 +262,7 @@ float4 main(InputType input) : SV_TARGET
 	//colour = saturate(lightingColour + ambientColour);
 	//colour = float4(depthValue, depthValue, depthValue, 1);
 	//colour = specular;
-	//colour = float4(input.binormal, 1);
+	//colour = float4(normal, 1);
 	//colour = float4(input.tex, 0, 1);
 	//colour = float4(normal, 1.0f);
 	

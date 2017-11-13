@@ -49,9 +49,15 @@ void DepthOfFieldShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	matrixBufferDesc.MiscFlags = 0;
 	matrixBufferDesc.StructureByteStride = 0;
-
-	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
+
+	screenSizeBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	screenSizeBufferDesc.ByteWidth = sizeof(ScreenSizeBufferType);
+	screenSizeBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	screenSizeBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	screenSizeBufferDesc.MiscFlags = 0;
+	screenSizeBufferDesc.StructureByteStride = 0;
+	renderer->CreateBuffer(&screenSizeBufferDesc, NULL, &screenSizeBuffer);
 
 	// Create a texture sampler state description.
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -63,13 +69,15 @@ void DepthOfFieldShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 }
 
 
-void DepthOfFieldShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* sceneTexture, ID3D11ShaderResourceView* depthTexture, ID3D11ShaderResourceView* blurTexture)
+void DepthOfFieldShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* sceneTexture, ID3D11ShaderResourceView* depthTexture, ID3D11ShaderResourceView* blurTexture, float screenResX, float screenResY)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType* dataPtr;
+	ScreenSizeBufferType* screenSizeDataPtr;
 	unsigned int bufferNumber;
 	XMMATRIX tworld, tview, tproj;
+	XMFLOAT2 screenRes;
 
 	// Transpose the matrices to prepare them for the shader.
 	tworld = XMMatrixTranspose(worldMatrix);
@@ -95,6 +103,14 @@ void DepthOfFieldShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 
 	// Now set the constant buffer in the vertex shader with the updated values.
 	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &matrixBuffer);
+
+	result = deviceContext->Map(screenSizeBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	screenSizeDataPtr = (ScreenSizeBufferType*)mappedResource.pData;
+	screenRes.x = screenResX;
+	screenRes.y = screenResY;
+	screenSizeDataPtr->screenResolution = screenRes;
+	deviceContext->Unmap(screenSizeBuffer, 0);
+	deviceContext->PSSetConstantBuffers(0, 1, &screenSizeBuffer);
 
 	// Set shader texture resource in the pixel shader.
 	deviceContext->PSSetShaderResources(0, 1, &sceneTexture);

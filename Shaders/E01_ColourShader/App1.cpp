@@ -21,8 +21,11 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	this->screenWidth = screenWidth;
 	this->screenHeight = screenHeight;
+	currentTime = 0;
+	windStrength = 0.45f;
+	windFreq = 0.2f;
 
-	
+
 	// TEXTURES
 	textureMgr->loadTexture("object_base", L"../res/PBR/RustedIron/rustediron-streaks_basecolor.png");
 	textureMgr->loadTexture("object_normal", L"../res/PBR/RustedIron/rustediron-streaks_normal.png");
@@ -35,18 +38,24 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	textureMgr->loadTexture("brick_roughness", L"../res/PBR/BlocksRough/blocksrough_roughness.png");
 	textureMgr->loadTexture("brick_height", L"../res/PBR/BlocksRough/blocksrough_height.png");
 
+	textureMgr->loadTexture("grass_base", L"../res/grass.png");
+	textureMgr->loadTexture("grass_noise_length", L"../res/noise1.png");
+	textureMgr->loadTexture("grass_noise_wind", L"../res/noise2.png");
+
 	textureMgr->loadTexture("skybox", L"../res/skybox.dds");
 
 	// MESHES
 	skyboxMesh = new SkyboxMesh(renderer->getDevice(), renderer->getDeviceContext());
 	floorMesh = new MyTesselationPlane(renderer->getDevice(), renderer->getDeviceContext());
 	objectMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/dwarf.obj");
+	grassGeometryMesh = new PlaneMesh(renderer->getDevice(), renderer->getDeviceContext(), 50);
 
 	// SHADERS
 	//colourShader = new ColourShader(renderer->getDevice(), hwnd);
 	skyboxShader = new SkyboxShader(renderer->getDevice(), hwnd);
 	objectShader = new ObjectShader(renderer->getDevice(), hwnd);
 	floorShader = new DisplacementShader(renderer->getDevice(), hwnd);
+	grassGeometryShader = new GeometryShader(renderer->getDevice(), hwnd);
 
 	// LIGHTS
 	pointLight = new Light();
@@ -99,6 +108,11 @@ App1::~App1()
 		delete objectMesh;
 		objectMesh = 0;
 	}
+	if (grassGeometryMesh)
+	{
+		delete grassGeometryMesh;
+		grassGeometryMesh = 0;
+	}
 
 	// Shaders
 	if (colourShader)
@@ -131,6 +145,11 @@ App1::~App1()
 		delete depthTesselationShader;
 		depthTesselationShader = 0;
 	}
+	if (grassGeometryShader)
+	{
+		delete grassGeometryShader;
+		grassGeometryShader = 0;
+	}
 }
 
 
@@ -143,6 +162,8 @@ bool App1::frame()
 	{
 		return false;
 	}
+
+	currentTime += timer->getTime();
 
 	// Handle input
 	ControlScene();
@@ -210,7 +231,7 @@ void App1::renderDepthToTexture()
 	worldMatrix = renderer->getWorldMatrix();
 	viewMatrix = camera->getViewMatrix();
 	projectionMatrix = renderer->getProjectionMatrix();
-	
+
 	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
 	objectMesh->sendData(renderer->getDeviceContext());
 	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
@@ -253,6 +274,11 @@ void App1::renderSceneToTexture()
 	//depthTesselationShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
 	//depthTesselationShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
 
+	worldMatrix = XMMatrixMultiply(XMMatrixScaling(0.3f, 0.3f, 0.3f), XMMatrixTranslation(-25.5f, -5.2f, 14.0f));
+	grassGeometryMesh->sendData(renderer->getDeviceContext());
+	grassGeometryShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("grass_base"),  textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
+	grassGeometryShader->render(renderer->getDeviceContext(), grassGeometryMesh->getIndexCount());
+
 	// Render skybox
 	worldMatrix = XMMatrixTranslation(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
 	skyboxMesh->sendData(renderer->getDeviceContext());
@@ -281,6 +307,12 @@ void App1::renderSceneToScreen()
 	floorMesh->sendData(renderer->getDeviceContext());
 	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
 	floorShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
+
+	// Render grass
+	worldMatrix = XMMatrixMultiply(XMMatrixScaling(0.3f, 0.3f, 0.3f), XMMatrixTranslation(-25.5f, -5.2f, 14.0f));
+	grassGeometryMesh->sendData(renderer->getDeviceContext());
+	grassGeometryShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("grass_base"), textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
+	grassGeometryShader->render(renderer->getDeviceContext(), grassGeometryMesh->getIndexCount());
 }
 
 void App1::renderFinalPostProcessing()
@@ -308,7 +340,7 @@ void App1::renderFinalPostProcessing()
 	DOFTexture->setRenderTarget(renderer->getDeviceContext());
 	DOFTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
 	orthoMesh->sendData(renderer->getDeviceContext());
-	DOFShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), depthTexture->getShaderResourceView(), blurTextureUpSampled->getShaderResourceView());
+	DOFShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), depthTexture->getShaderResourceView(), blurTextureUpSampled->getShaderResourceView(), screenWidth, screenHeight);
 	DOFShader->render(renderer->getDeviceContext(), orthoMesh->getIndexCount());
 
 	renderer->setBackBufferRenderTarget();
@@ -357,7 +389,7 @@ void App1::renderGUITexture() {
 		//targetResourceView = shadowMapTexture->getShaderResourceView();
 		targetResourceView = sceneTextureCurrent->getShaderResourceView();
 	}
-	
+
 	// ortho matrix for 2D rendering
 	orthoMatrix = renderer->getOrthoMatrix();
 	orthoViewMatrix = camera->getOrthoViewMatrix();

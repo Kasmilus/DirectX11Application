@@ -92,6 +92,7 @@
     <ClCompile Include="DepthShader.cpp" />
     <ClCompile Include="DepthTesselationShader.cpp" />
     <ClCompile Include="DisplacementShader.cpp" />
+    <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MyBaseMesh.cpp" />
     <ClCompile Include="MyBaseShader.cpp" />
@@ -109,6 +110,7 @@
     <ClInclude Include="DepthShader.h" />
     <ClInclude Include="DepthTesselationShader.h" />
     <ClInclude Include="DisplacementShader.h" />
+    <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="MyBaseMesh.h" />
     <ClInclude Include="MyBaseShader.h" />
     <ClInclude Include="MyModelMesh.h" />
@@ -165,6 +167,15 @@
     </FxCompile>
     <FxCompile Include="shaders\DOF_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\geometry_gs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Geometry</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\geometry_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shaders\geometry_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="shaders\object_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
