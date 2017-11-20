@@ -51,17 +51,16 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	grassGeometryMesh = new PlaneMesh(renderer->getDevice(), renderer->getDeviceContext(), 50);
 
 	// SHADERS
-	//colourShader = new ColourShader(renderer->getDevice(), hwnd);
 	skyboxShader = new SkyboxShader(renderer->getDevice(), hwnd);
 	objectShader = new ObjectShader(renderer->getDevice(), hwnd);
-	floorShader = new DisplacementShader(renderer->getDevice(), hwnd);
+	displacementShader = new DisplacementShader(renderer->getDevice(), hwnd);
 	grassGeometryShader = new GeometryShader(renderer->getDevice(), hwnd);
 
 	// LIGHTS
 	pointLight = new Light();
 	pointLight->setAmbientColour(0.1f, 0.1f, 0.1f, 1.0f);
 	pointLight->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
-	pointLight->setPosition(-3.5f, 1.0f, -10.0f);
+	pointLight->setPosition(-1.5f, -1.0f, -0.2f);
 
 
 	// Render to texture
@@ -83,6 +82,18 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	blurShader = new BlurShader(renderer->getDevice(), hwnd);
 	DOFShader = new DepthOfFieldShader(renderer->getDevice(), hwnd);
 	depthTesselationShader = new DepthTesselationShader(renderer->getDevice(), hwnd);
+
+	// Render objects
+	skybox = new RenderObject(skyboxMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+	floor = new RenderObject(floorMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+	floor->SetPosition(-15, -5, -10);
+	floor->SetScale(0.25f, 0.25f, 0.25f);
+	dwarf = new RenderObject(objectMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+	grass = new RenderObject(grassGeometryMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+	grass->SetPosition(-25.5f, -5.2f, 14.0f);
+	grass->SetScale(0.3f, 0.3f, 0.3f);
+	orthoMeshObj = new RenderObject(orthoMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+
 
 }
 
@@ -130,10 +141,10 @@ App1::~App1()
 		delete objectShader;
 		objectShader = 0;
 	}
-	if (floorShader)
+	if (displacementShader)
 	{
-		delete floorShader;
-		floorShader = 0;
+		delete displacementShader;
+		displacementShader = 0;
 	}
 	if (depthShader)
 	{
@@ -149,6 +160,28 @@ App1::~App1()
 	{
 		delete grassGeometryShader;
 		grassGeometryShader = 0;
+	}
+
+	// Render objects
+	if (skybox)
+	{
+		delete skybox;
+		skybox = 0;
+	}
+	if (floor)
+	{
+		delete floor;
+		floor = 0;
+	}
+	if (dwarf)
+	{
+		delete dwarf;
+		dwarf = 0;
+	}
+	if (grass)
+	{
+		delete grass;
+		grass = 0;
 	}
 }
 
@@ -185,6 +218,14 @@ bool App1::render()
 	pointLight->generateProjectionMatrix(SCREEN_NEAR, SCREEN_DEPTH);
 	pointLight->generateViewMatrix();
 
+	// get world view projection matrices
+	worldMatrix = renderer->getWorldMatrix();
+	viewMatrix = camera->getViewMatrix();
+	projectionMatrix = renderer->getProjectionMatrix();
+
+	// Skybox pos
+	skybox->SetPosition(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
+
 	// Shadow map
 	renderShadowMapToTexture();
 
@@ -199,120 +240,69 @@ bool App1::render()
 
 void App1::renderShadowMapToTexture()
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
 	shadowMapTexture->setRenderTarget(renderer->getDeviceContext());
 	shadowMapTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
-	// get world view projection matrices
+
+	// get world view projection matrices from light point position
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
 	worldMatrix = renderer->getWorldMatrix();
 	viewMatrix = pointLight->getViewMatrix();
 	projectionMatrix = pointLight->getProjectionMatrix();
-	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
-	objectMesh->sendData(renderer->getDeviceContext());
-	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
-	depthShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
-	// Render floor
-	worldMatrix = XMMatrixTranslation(-50, -5, -20);
-	floorMesh->sendData(renderer->getDeviceContext());
-	depthTesselationShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
-	depthTesselationShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
 
+	// Dwarf
+	dwarf->RenderDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
+	// Floor
+	floor->RenderTesselationDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
+	
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
 	renderer->setBackBufferRenderTarget();
 }
 
 void App1::renderDepthToTexture()
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
 	// Set the render target to be the render to texture.
 	depthTexture->setRenderTarget(renderer->getDeviceContext());
 	// Clear the render to texture.
-	depthTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
-	// Get the world, view, and projection matrices from the camera and d3d objects.
-	worldMatrix = renderer->getWorldMatrix();
-	viewMatrix = camera->getViewMatrix();
-	projectionMatrix = renderer->getProjectionMatrix();
+	depthTexture->clearRenderTarget(renderer->getDeviceContext(), 1.0f, 1.0f, 0.0f, 1.0f);
 
-	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
-	objectMesh->sendData(renderer->getDeviceContext());
-	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
-	depthShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
-	// Render floor
-	worldMatrix = XMMatrixTranslation(-50, -5, -20);
-	floorMesh->sendData(renderer->getDeviceContext());
-	depthTesselationShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
-	depthTesselationShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
+	// Dwarf
+	dwarf->RenderDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
+	// Floor
+	floor->RenderTesselationDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
+	
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
 	renderer->setBackBufferRenderTarget();
 }
 
 void App1::renderSceneToTexture()
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
 
 	// Set the render target to be the render to texture.
 	sceneTextureCurrent->setRenderTarget(renderer->getDeviceContext());
-
 	// Clear the render to texture.
 	sceneTextureCurrent->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
 
-	// Get the world, view, and projection matrices from the camera and d3d objects.
-	worldMatrix = renderer->getWorldMatrix();
-	viewMatrix = camera->getViewMatrix();
-	projectionMatrix = renderer->getProjectionMatrix();
-
-	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
-	// Render object
-	objectMesh->sendData(renderer->getDeviceContext());
-	objectShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
-	objectShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
-
-	// Render floor
-	worldMatrix = XMMatrixTranslation(-50, -5, -20);
-	floorMesh->sendData(renderer->getDeviceContext());
-	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
-	floorShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
-	//depthTesselationShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
-	//depthTesselationShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
-
-	worldMatrix = XMMatrixMultiply(XMMatrixScaling(0.3f, 0.3f, 0.3f), XMMatrixTranslation(-25.5f, -5.2f, 14.0f));
-	grassGeometryMesh->sendData(renderer->getDeviceContext());
-	grassGeometryShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("grass_base"),  textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
-	grassGeometryShader->render(renderer->getDeviceContext(), grassGeometryMesh->getIndexCount());
-
+	// Dwarf
+	dwarf->RenderObjectShader(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
+	// Floor
+	floor->RenderDisplacement(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
+	// Grass
+	grass->RenderGrass(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("grass_base"), textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
 	// Render skybox
-	worldMatrix = XMMatrixTranslation(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
-	skyboxMesh->sendData(renderer->getDeviceContext());
-	skyboxShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("skybox"));
-	skyboxShader->render(renderer->getDeviceContext(), skyboxMesh->getIndexCount());
+	skybox->RenderSkybox(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("skybox"));
 
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
 	renderer->setBackBufferRenderTarget();
 }
-
+// Render objects without any post-processing effects
 void App1::renderSceneToScreen()
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
-	worldMatrix = renderer->getWorldMatrix();
-	viewMatrix = camera->getViewMatrix();
-	projectionMatrix = renderer->getProjectionMatrix();
-
-	// Put the model vertex and index buffers on the graphics pipeline to prepare them for drawing.
-	// Render object
-	objectMesh->sendData(renderer->getDeviceContext());
-	objectShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
-	objectShader->render(renderer->getDeviceContext(), objectMesh->getIndexCount());
-
+	// Render dwarf
+	dwarf->RenderObjectShader(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
 	// Render floor
-	worldMatrix = XMMatrixTranslation(-50, -5, -20);
-	floorMesh->sendData(renderer->getDeviceContext());
-	floorShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
-	floorShader->render(renderer->getDeviceContext(), floorMesh->getIndexCount());
-
+	floor->RenderDisplacement(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
 	// Render grass
-	worldMatrix = XMMatrixMultiply(XMMatrixScaling(0.3f, 0.3f, 0.3f), XMMatrixTranslation(-25.5f, -5.2f, 14.0f));
-	grassGeometryMesh->sendData(renderer->getDeviceContext());
-	grassGeometryShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("grass_base"), textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
-	grassGeometryShader->render(renderer->getDeviceContext(), grassGeometryMesh->getIndexCount());
+	grass->RenderGrass(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("grass_base"), textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
 }
 
 void App1::renderFinalPostProcessing()
@@ -321,41 +311,34 @@ void App1::renderFinalPostProcessing()
 	blurTextureDownSampled->setRenderTarget(renderer->getDeviceContext());
 	blurTextureDownSampled->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
 
-	orthoMesh->sendData(renderer->getDeviceContext());
-	// Horizontal blur
-	blurShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), blurTextureDownSampled->getShaderResourceView(), screenWidth, screenHeight, true);
-	blurShader->render(renderer->getDeviceContext(), orthoMesh->getIndexCount());
-	// Vertical blur
-	blurShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, blurTextureDownSampled->getShaderResourceView(), blurTextureDownSampled->getShaderResourceView(), screenWidth, screenHeight, false);
-	blurShader->render(renderer->getDeviceContext(), orthoMesh->getIndexCount());
+	// Gaussian blur
+	orthoMeshObj->RenderBlur(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), blurTextureDownSampled->getShaderResourceView(), blurTextureDownSampled->getShaderResourceView(), screenWidth, screenHeight);
 
 	// Up sample
 	blurTextureUpSampled->setRenderTarget(renderer->getDeviceContext());
 	blurTextureUpSampled->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
-	orthoMesh->sendData(renderer->getDeviceContext());
-	colourShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, blurTextureDownSampled->getShaderResourceView());
-	colourShader->render(renderer->getDeviceContext(), orthoMesh->getIndexCount());
+	orthoMeshObj->RenderTexture(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, blurTextureDownSampled->getShaderResourceView());
 
 	// Depth of field
 	DOFTexture->setRenderTarget(renderer->getDeviceContext());
 	DOFTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
-	orthoMesh->sendData(renderer->getDeviceContext());
-	DOFShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), depthTexture->getShaderResourceView(), blurTextureUpSampled->getShaderResourceView(), screenWidth, screenHeight);
-	DOFShader->render(renderer->getDeviceContext(), orthoMesh->getIndexCount());
+	orthoMeshObj->RenderDepthOfField(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), depthTexture->getShaderResourceView(), blurTextureUpSampled->getShaderResourceView(), screenWidth, screenHeight);
 
 	renderer->setBackBufferRenderTarget();
 }
 
 void App1::renderScene()
 {
-	renderFinalPostProcessing();
-
-	//// Clear the scene. (default blue colour)
-	renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
 	// Get the world, view, and projection matrices from the camera and d3d objects.
 	worldMatrix = renderer->getWorldMatrix();
 	viewMatrix = camera->getViewMatrix();
 	projectionMatrix = renderer->getProjectionMatrix();
+
+	renderFinalPostProcessing();
+
+	//// Clear the scene. (default blue colour)
+	renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
+	
 
 	// Render GUI texture
 	if (!renderer->getWireframeState())
@@ -389,7 +372,7 @@ void App1::renderGUITexture() {
 		//targetResourceView = shadowMapTexture->getShaderResourceView();
 		targetResourceView = sceneTextureCurrent->getShaderResourceView();
 	}
-
+	//targetResourceView = shadowMapTexture->getShaderResourceView();
 	// ortho matrix for 2D rendering
 	orthoMatrix = renderer->getOrthoMatrix();
 	orthoViewMatrix = camera->getOrthoViewMatrix();
@@ -397,9 +380,7 @@ void App1::renderGUITexture() {
 	// Turn off the Z buffer to begin all 2D rendering.
 	renderer->setZBuffer(false);
 
-	orthoMesh->sendData(renderer->getDeviceContext());
-	colourShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, targetResourceView);
-	colourShader->render(renderer->getDeviceContext(), orthoMesh->getIndexCount());
+	orthoMeshObj->RenderTexture(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, targetResourceView);
 
 	renderer->setZBuffer(true);
 }

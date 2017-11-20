@@ -61,7 +61,7 @@ void CalculateNormals(inout OutputType output, in float3 vertexPosition);
 float3 Sobel(float2 texCoords, in float3 vertexPosition);
 
 [domain("tri")]
-OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<InputType, 4> patch)
+OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<InputType, 3> patch)
 {
     float3 vertexPosition;
     OutputType output;
@@ -74,6 +74,8 @@ OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, c
 	output.binormal = uvwCoord.x * patch[0].binormal + uvwCoord.y * patch[1].binormal + uvwCoord.z * patch[2].binormal;
 
 	output.normal = normalize(output.normal);
+	output.tangent = normalize(output.tangent);
+	output.binormal = normalize(output.binormal);
 
 	// --- DISPLACEMENT MAPPING --- //
 	float height = SampleDisplacementMap(output.tex, vertexPosition);
@@ -121,7 +123,7 @@ void CalculateNormals(inout OutputType output, in float3 vertexPosition)
 	// How much did normal changed?
 	float3 normalDelta = output.normal - normal;
 	// Set new normal, binormal and tangent vectors
-	output.normal = normal;
+	//output.normal = normal;
 	//output.binormal = output.binormal + output.binormal * normalDelta;
 	//output.tangent = output.tangent + output.tangent * normalDelta;
 }

@@ -169,3 +169,13 @@ void DepthTesselationShader::setShaderParameters(ID3D11DeviceContext* deviceCont
 	deviceContext->PSSetConstantBuffers(0, 1, &DepthOfFieldBuffer);
 
 }
+
+void DepthTesselationShader::render(ID3D11DeviceContext* deviceContext, int indexCount)
+{
+	// Set the sampler state in the pixel shader.
+	deviceContext->PSSetSamplers(0, 1, &sampleState);
+	deviceContext->DSSetSamplers(0, 1, &sampleState);
+
+	// Base render function.
+	MyBaseShader::render(deviceContext, indexCount);
+}

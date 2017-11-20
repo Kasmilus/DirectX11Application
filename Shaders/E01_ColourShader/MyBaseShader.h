@@ -4,6 +4,7 @@
 	just like base shader but is loading also tangent and binormal vectors into the vertex shader
 */
 
+#include "../DXFramework/DXF.h"
 #include <d3d11.h>
 #include <D3Dcompiler.h>
 #include <dxgi.h>
@@ -15,7 +16,7 @@ using namespace std;
 using namespace DirectX;
 
 
-class MyBaseShader
+class MyBaseShader : public BaseShader
 {
 protected:
 	struct MatrixBufferType

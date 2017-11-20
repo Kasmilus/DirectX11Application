@@ -131,3 +131,4 @@ void BlurShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const X
 	deviceContext->PSSetShaderResources(0, 1, &sceneTexture);
 	deviceContext->PSSetShaderResources(1, 1, &depthTexture);
 }
+

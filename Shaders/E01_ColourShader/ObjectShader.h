@@ -30,6 +30,7 @@ public:
 
 
 	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness);
+	void render(ID3D11DeviceContext* deviceContext, int vertexCount);
 
 private:
 	void initShader(WCHAR*, WCHAR*);

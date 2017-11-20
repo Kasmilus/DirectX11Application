@@ -144,3 +144,14 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 	ID3D11ShaderResourceView* textureArray[4] = { texture_base, texture_normal, texture_metallic, texture_roughness };
 	deviceContext->PSSetShaderResources(0, 4, textureArray);
 }
+
+void ObjectShader::render(ID3D11DeviceContext* deviceContext, int indexCount)
+{
+	// Set the sampler state in the pixel shader.
+	deviceContext->PSSetSamplers(0, 1, &sampleState);
+
+	// Base render function.
+	MyBaseShader::render(deviceContext, indexCount);
+}
+
+

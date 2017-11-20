@@ -30,6 +30,8 @@ struct OutputType
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
 	float3 viewDirection : TEXCOORD1;
+	float4 lightViewPosition : TEXCOORD2;	// THIS IS NOT SET YET
+	float3 lightPos : TEXCOORD3;	// SAME
 };
 
 OutputType main(InputType input)

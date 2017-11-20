@@ -99,6 +99,7 @@
     <ClCompile Include="MyModelMesh.cpp" />
     <ClCompile Include="MyTesselationPlane.cpp" />
     <ClCompile Include="ObjectShader.cpp" />
+    <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="SkyboxMesh.cpp" />
     <ClCompile Include="SkyboxShader.cpp" />
   </ItemGroup>
@@ -116,6 +117,7 @@
     <ClInclude Include="MyModelMesh.h" />
     <ClInclude Include="MyTesselationPlane.h" />
     <ClInclude Include="ObjectShader.h" />
+    <ClInclude Include="RenderObject.h" />
     <ClInclude Include="SkyboxMesh.h" />
     <ClInclude Include="SkyboxShader.h" />
   </ItemGroup>

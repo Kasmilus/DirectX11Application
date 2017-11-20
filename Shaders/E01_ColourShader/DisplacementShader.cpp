@@ -57,6 +57,7 @@ void DisplacementShader::initShader(WCHAR* vsFilename,  WCHAR* psFilename)
 	D3D11_BUFFER_DESC cameraBufferDesc;
 	D3D11_BUFFER_DESC lightBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
+	D3D11_SAMPLER_DESC samplerComparisonDesc;
 
 	// Load shader files
 	loadVertexShader(vsFilename);
@@ -97,9 +98,9 @@ void DisplacementShader::initShader(WCHAR* vsFilename,  WCHAR* psFilename)
 
 	// Create a texture sampler state description.
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 1;
 	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
@@ -113,7 +114,7 @@ void DisplacementShader::initShader(WCHAR* vsFilename,  WCHAR* psFilename)
 	renderer->CreateSamplerState(&samplerDesc, &sampleState);
 
 	// Required a CLAMPED sampler for sampling the depth map
-	samplerDesc.Filter = D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT;
+	//samplerDesc.Filter = D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -121,10 +122,10 @@ void DisplacementShader::initShader(WCHAR* vsFilename,  WCHAR* psFilename)
 	renderer->CreateSamplerState(&samplerDesc, &sampleStateClampPoint);
 
 	// Required a CLAMPED sampler for sampling the depth map
-	samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	samplerComparisonDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT; // D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT
+	samplerComparisonDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
 	// Create the texture sampler state.
-	renderer->CreateSamplerState(&samplerDesc, &sampleStateComparison);
+	renderer->CreateSamplerState(&samplerComparisonDesc, &sampleStateComparison);
 
 }
 

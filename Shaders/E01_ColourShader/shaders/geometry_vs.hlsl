@@ -1,6 +1,5 @@
 // Grass shader
 // Don't do anything here, everything's handled by geometry shader stage
-// MAYBE ADD FRUSTRUM CULLING LATER ON
 
 struct InputType
 {
@@ -9,7 +8,21 @@ struct InputType
 	float3 normal : NORMAL;
 };
 
-InputType main(InputType input)
+struct OutputType
 {
-	return input;
+	float4 position : POSITION;
+	float2 tex : TEXCOORD0;
+	float3 normal : NORMAL;
+	float4 positionSV : SV_POSITION;
+};
+
+OutputType main(InputType input)
+{
+	OutputType output;
+	output.position = input.position;
+	output.tex = input.tex;
+	output.normal = input.normal;
+	output.positionSV = 0;
+
+	return output;
 }

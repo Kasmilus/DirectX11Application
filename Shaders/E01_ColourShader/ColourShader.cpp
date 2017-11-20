@@ -90,5 +90,3 @@ void ColourShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 }
 
 
-
-

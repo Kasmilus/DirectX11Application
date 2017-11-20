@@ -31,22 +31,7 @@ struct InputType
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// SHADOWS -------------------------------------------------------------------
 
 
 
@@ -140,20 +125,7 @@ float PCSS(float4 coords)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// SHADOWS ==================================================================================================
 
 
 
@@ -198,7 +170,7 @@ float4 main(InputType input) : SV_TARGET
 	float4 projectTexCoord;
 	float depthValue;
 	float lightDepthValue;
-	/*
+	
 	bias = 0.0005f;
 
 	// Calculate prjected coordinates, then into UV range
@@ -212,20 +184,20 @@ float4 main(InputType input) : SV_TARGET
 	//if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y))
 	//{
 		// Sample the shadow map depth value from the depth texture using the sampler at the projected texture coordinate location.
-		//depthValue = shaderTextures[4].Sample(SampleTypeClampPoint, projectTexCoord).x;
-		//projectTexCoord.z = input.lightViewPosition.z;
-		depthValue = PCSS(projectTexCoord);
+		depthValue = shaderTextures[4].Sample(SampleTypeClampPoint, projectTexCoord).x;
+		projectTexCoord.z = input.lightViewPosition.z;
+		//depthValue = PCSS(projectTexCoord);
 
 		// Calculate the depth of the light.
 		lightDepthValue = input.lightViewPosition.z / input.lightViewPosition.w;
 
 		// Subtract the bias from the lightDepthValue.
 		lightDepthValue = lightDepthValue - bias;
-		*/
+		
 		// Compare the depth of the shadow map value and the depth of the light to determine whether to shadow or to light this pixel.
 		// If the light is in front of the object then light the pixel, if not then shadow this pixel since an object (occluder) is casting a shadow on it.
 		//if (lightDepthValue < depthValue)
-		//{
+		{
 			// ----- NORMAL MAPPING ----- //
 			// Move normal sample into the range of [-1, 1]
 			normalSample = (normalSample * 2.0f) - 1.0f;
@@ -236,19 +208,36 @@ float4 main(InputType input) : SV_TARGET
 
 			// ----- NORMAL MAPPING ----- //
 			// ----- LIGHTING ----- //
-			//float3 lightDir = input.viewDirection - lightPosition;
-			lightIntensity = saturate(dot(normal, -lightPosition));
+			/*
+
+			BLINN PHONG
+
+			float3 lightDir = input.viewDirection - lightPosition;
+			float3 halfVector = normalize(lightDir + input.viewDirection);
+			lightIntensity = saturate(dot(normal, halfVector));
+
+			*/
 			//lightIntensity = 1;	// testing shadows
+
+			// COOK - TORRANCE
+
+
+
+
+
+
+
+			specular = 0;
 			if (lightIntensity > 0)
 			{
 				// Calculate the reflection vector based on the light intensity, normal vector, and light direction.
 				float3 reflection = normalize(2 * lightIntensity * normal + lightPosition);
 
 				// Determine the amount of specular light based on the reflection vector, viewing direction, and specular power.
-				float specularPower = 100;	// That should come from light
+				float specularPower = 10;	// That should come from light
 				specular = pow(saturate(dot(reflection, input.viewDirection)), specularPower);
 			}
-		//}
+		}
 	//}
 	// ----- LIGHTING ----- //
 	
@@ -264,34 +253,10 @@ float4 main(InputType input) : SV_TARGET
 	//colour = specular;
 	//colour = float4(normal, 1);
 	//colour = float4(input.tex, 0, 1);
-	//colour = float4(normal, 1.0f);
+	//colour = float4(input.tangent, 1.0f);
 	
 	return colour;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

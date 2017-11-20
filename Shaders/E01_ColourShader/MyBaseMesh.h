@@ -4,12 +4,13 @@
 Edited base mesh class so it's storing now tangent and binormal vectors
 */
 
+#include "../DXFramework/DXF.h"
 #include <d3d11.h>
 #include <directxmath.h>
 
 using namespace DirectX;
 
-class MyBaseMesh
+class MyBaseMesh : public BaseMesh
 {
 protected:
 

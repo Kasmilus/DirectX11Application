@@ -19,6 +19,8 @@
 #include "DisplacementShader.h"
 #include "DepthTesselationShader.h"
 #include "GeometryShader.h"
+// Other
+#include "RenderObject.h"
 
 class App1 : public BaseApplication
 {
@@ -46,11 +48,15 @@ private:
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, orthoMatrix, orthoViewMatrix;
 	float screenWidth, screenHeight;
 
-	SkyboxShader* skyboxShader;
-	ObjectShader* objectShader;	// Uses dwarf.obj, use head.obj later to show tessellation on
-	DisplacementShader* floorShader;	// Using height map
-	GeometryShader* grassGeometryShader;
+	
+	// objects
+	RenderObject* skybox;
+	RenderObject* floor;
+	RenderObject* dwarf;
+	RenderObject* grass;
+	RenderObject* orthoMeshObj;
 
+	// Meshes
 	BaseMesh* skyboxMesh;	// Zmienic pozniej zeby nie renderowalo 2 stron skoro i tak tylko 1 widac bedzie
 	MyBaseMesh* floorMesh;
 	MyBaseMesh* objectMesh;
@@ -58,13 +64,19 @@ private:
 
 	Light* pointLight;
 
-	// Render texture
+	// Shaders
+	SkyboxShader* skyboxShader;
+	ObjectShader* objectShader;
+	DisplacementShader* displacementShader;	// Using height map
+	GeometryShader* grassGeometryShader;
+
 	ColourShader* colourShader;
 	DepthShader* depthShader;
 	DepthTesselationShader* depthTesselationShader;
 	BlurShader* blurShader;
 	DepthOfFieldShader* DOFShader;
 
+	// Render texture
 	RenderTexture* depthTexture;
 	RenderTexture* sceneTextureCurrent;
 	RenderTexture* blurTextureDownSampled;

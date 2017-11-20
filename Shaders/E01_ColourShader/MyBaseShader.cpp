@@ -3,6 +3,7 @@
 
 // Store pointer to render device and handle to window.
 MyBaseShader::MyBaseShader(ID3D11Device* device, HWND lhwnd)
+	:BaseShader(device, lhwnd)
 {
 	renderer = device;
 	hwnd = hwnd;

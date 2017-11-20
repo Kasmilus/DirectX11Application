@@ -41,7 +41,7 @@ struct OutputType
 };
 
 [domain("tri")]
-OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<InputType, 4> patch)
+OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<InputType, 3> patch)
 {
     float3 vertexPosition;
     OutputType output;
