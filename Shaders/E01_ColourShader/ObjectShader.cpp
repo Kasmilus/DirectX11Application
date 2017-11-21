@@ -83,7 +83,7 @@ void ObjectShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 }
 
 
-void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness)
+void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -141,8 +141,14 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 	deviceContext->PSSetConstantBuffers(0, 1, &lightBuffer);
 
 	// Set shader texture resource in the pixel shader.
-	ID3D11ShaderResourceView* textureArray[4] = { texture_base, texture_normal, texture_metallic, texture_roughness };
-	deviceContext->PSSetShaderResources(0, 4, textureArray);
+	deviceContext->PSSetShaderResources(0, 1, &texture_base);
+	deviceContext->PSSetShaderResources(1, 1, &texture_normal);
+	deviceContext->PSSetShaderResources(2, 1, &texture_metallic);
+	deviceContext->PSSetShaderResources(3, 1, &texture_roughness);
+	deviceContext->PSSetShaderResources(4, 1, &texture_roughness);
+	deviceContext->PSSetShaderResources(5, 1, &texture_envCubemap);
+
+	//deviceContext->PSSetShaderResources(4, 1, &texture_envCubemap);
 }
 
 void ObjectShader::render(ID3D11DeviceContext* deviceContext, int indexCount)

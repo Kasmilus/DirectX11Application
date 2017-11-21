@@ -2,10 +2,17 @@
 
 #define PI 3.14159265
 
-Texture2D shaderTextures[5] : register(t0); // 0 - base, 1 - normal, 2 - metallic, 3 - roughness, 4 - shadow
+// 0 - base, 1 - normal, 2 - metallic, 3 - roughness, 4 - shadow
+Texture2D baseTexture : register(t0);
+Texture2D normalTexture : register(t1);
+Texture2D metallicTexture : register(t2);
+Texture2D roughnessTexture : register(t3);
+Texture2D shadowMapTexture : register(t4);
+TextureCube cubemapTexture : register(t5);	// Environment map
 SamplerState SampleType : register(s0);
 SamplerState SampleTypeClampPoint : register(s1);
 SamplerComparisonState SampleTypeComparison : register(s2);
+SamplerState SampleTypeCubemap : register(s3);
 
 // Light Buffer
 cbuffer LightBuffer : register(cb0)
@@ -74,7 +81,7 @@ void FindBlocker(out float avgBlockerDepth,
 	out float numBlockers,
 	float2 uv, float zReceiver)
 {
-	Texture2D shadowMapTex = shaderTextures[4];
+    Texture2D shadowMapTex = shadowMapTexture;
 	//This uses similar triangles to compute what
 	//area of the shadow map we should search
 	float searchWidth = LIGHT_SIZE_UV * (zReceiver - NEAR_PLANE) / zReceiver;
@@ -96,7 +103,7 @@ void FindBlocker(out float avgBlockerDepth,
 }
 float PCF_Filter(float2 uv, float zReceiver, float filterRadiusUV)
 {
-	Texture2D shadowMapTex = shaderTextures[4];
+    Texture2D shadowMapTex = shadowMapTexture;
 
 	float sum = 0.0f;
 	for (int i = 0; i < PCF_NUM_SAMPLES; ++i)
@@ -197,24 +204,27 @@ float3 CookTorrance(float3 materialDiffuseColor,
 	float3 normal,
 	float3 lightDir,
 	float3 viewDir,
-	float3 lightColor)
+	float3 lightColor,
+	float roughness,
+	float metallic)
 {
 	// indices of refraction between air and shader object
 	float ior = 0.1f;	
-	float metallic = 0;
-	float roughness = 0.8f;
-	float k = 0.05f;
+	//float metallic = 1.0f;
+    //roughness = saturate(roughness + 0.1f); // set minimum roughness so it's never fully reflective
+    float k = 0.1f; // error correction - isn't in formula but I added it to get rid of some problems appearing at low angles
 
-
+	// Calculating specular component
 	float lightDirAngle = saturate(dot(normal, lightDir));
-	float3 Rs = 0.0;
+    float3 Kd = 1.0f;	// Ammount of light that is diffused
+	float3 Ks = 0.0f;	// Ammount of light that is specularly reflected
 	if (lightDirAngle > 0)
 	{
 		float3 halfVector = normalize(lightDir + viewDir);
 		float halfVectorAngle = saturate(dot(normal, halfVector));
 		float viewDirAngle = saturate(dot(normal, viewDir));
-		float lightHalfVectorAngle = saturate(dot(lightDir, halfVector));
-		float lightVectorAngle = saturate(dot(normal, lightDir));
+		//float lightHalfVectorAngle = saturate(dot(lightDir, halfVector)); // Used in Cook-Torrance geometry function
+		//float lightVectorAngle = saturate(dot(normal, lightDir));	// Used in Cook-Torrance geometry function
 
 		// Calculate reflectance
 		float3 F0 = abs((1.0 - ior) / (1.0 + ior));	// Actual formula to calculate that is ( (n1 - n2) / (n1 + n2) )^2 but here we use approximation
@@ -230,9 +240,23 @@ float3 CookTorrance(float3 materialDiffuseColor,
 		//float G = CookTorranceGeometry(halfVectorAngle, lightVectorAngle, lightHalfVectorAngle);
 		float G = GGX_PartialGeometryTerm(viewDir, normal, halfVector, roughness);
 
-		Rs = (D * F * G) / (PI * lightDirAngle * viewDirAngle);
-	}
-	return materialDiffuseColor * lightColor * lightDirAngle + lightColor * materialSpecularColor * lightDirAngle * (k + Rs * (1.0 - k));
+		// Finally put it all together
+        Ks = (D * F * G) / (PI * lightDirAngle * clamp(viewDirAngle, k, 1 - k));
+		// Law of energy conservation, don't allow to reflect more light than comes in
+       // Kd = (1 - Ks);
+
+    }
+
+
+	// Calculate irradiance, this is simplified model using the same cubemap for both(spec and diff) components
+    float3 envColor = cubemapTexture.Sample(SampleTypeCubemap, normal).xyz;
+    float3 irradiance = envColor * saturate(metallic - roughness) + envColor * roughness;
+
+    float3 diffuseComponent = materialDiffuseColor * irradiance * lightColor * lightDirAngle * Kd;
+	float3 specularComponent = lightColor * materialSpecularColor * irradiance * lightDirAngle * Ks;
+
+	return diffuseComponent + specularComponent;
+    //return envColor;
 }
 
 
@@ -244,10 +268,10 @@ float3 CookTorrance(float3 materialDiffuseColor,
 float4 main(InputType input) : SV_TARGET
 {
 	// Textures
-	Texture2D textureBase = shaderTextures[0];
-	Texture2D textureNormal = shaderTextures[1];
-	Texture2D textureMetallic = shaderTextures[2];
-	Texture2D textureRoughness = shaderTextures[3];
+    Texture2D textureBase = baseTexture;
+    Texture2D textureNormal = normalTexture;
+	Texture2D textureMetallic = metallicTexture;
+	Texture2D textureRoughness = roughnessTexture;
 	// Textures samples for this fragment
 	float4 baseColour = textureBase.Sample(SampleType, input.tex);
 	float3 normalSample = textureNormal.Sample(SampleType, input.tex).rgb;
@@ -278,7 +302,7 @@ float4 main(InputType input) : SV_TARGET
 	//if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y))
 	//{
 		// Sample the shadow map depth value from the depth texture using the sampler at the projected texture coordinate location.
-		depthValue = shaderTextures[4].Sample(SampleTypeClampPoint, projectTexCoord).x;
+		depthValue = shadowMapTexture.Sample(SampleTypeClampPoint, projectTexCoord).x;
 		projectTexCoord.z = input.lightViewPosition.z;
 		//depthValue = PCSS(projectTexCoord);
 
@@ -344,7 +368,7 @@ float4 main(InputType input) : SV_TARGET
 
 	ambientColour = saturate(baseColour * lightAmbientColour);
 	//lightingColour = saturate(baseColour * lightDiffuseColour * lightIntensity);
-	lightingColour = float4(CookTorrance(baseColour, lightDiffuseColour, normal, lightDir, input.viewDirection, lightDiffuseColour), 1);
+    lightingColour = float4(CookTorrance(baseColour, lightDiffuseColour, normal, lightDir, input.viewDirection, lightDiffuseColour, roughness, metallic), 1);
 	specular = specular * metallic;
 	colour = saturate(lightingColour + specular + ambientColour);
 	//colour = saturate(lightingColour + ambientColour);

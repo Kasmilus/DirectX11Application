@@ -21,6 +21,7 @@
 #include "GeometryShader.h"
 // Other
 #include "RenderObject.h"
+#include "RenderTextureCubemap.h"
 
 class App1 : public BaseApplication
 {
@@ -34,6 +35,7 @@ public:
 
 protected:
 	bool render();
+	void renderSphereCubemap();
 	void renderShadowMapToTexture();
 	void renderDepthToTexture();
 	void renderSceneToTexture();
@@ -53,12 +55,14 @@ private:
 	RenderObject* skybox;
 	RenderObject* floor;
 	RenderObject* dwarf;
+	RenderObject* sphere;
 	RenderObject* grass;
 	RenderObject* orthoMeshObj;
 
 	// Meshes
 	BaseMesh* skyboxMesh;	// Zmienic pozniej zeby nie renderowalo 2 stron skoro i tak tylko 1 widac bedzie
 	MyBaseMesh* floorMesh;
+	MyBaseMesh* sphereMesh;
 	MyBaseMesh* objectMesh;
 	BaseMesh* grassGeometryMesh;
 
@@ -76,13 +80,14 @@ private:
 	BlurShader* blurShader;
 	DepthOfFieldShader* DOFShader;
 
-	// Render texture
+	// Render textures
 	RenderTexture* depthTexture;
 	RenderTexture* sceneTextureCurrent;
 	RenderTexture* blurTextureDownSampled;
 	RenderTexture* blurTextureUpSampled;
 	RenderTexture* DOFTexture;
 	RenderTexture* shadowMapTexture;
+	RenderTextureCubemap* sphereReflectionCubemap;
 
 	OrthoMesh* orthoMesh;
 

@@ -19,16 +19,20 @@ public:
 	RenderObject(BaseMesh* mesh, SkyboxShader* skyboxShader, ObjectShader* objectShader, DisplacementShader* displacementShader, GeometryShader* geometryShader, ColourShader* colourShader, DepthShader* depthShader, DepthTesselationShader* depthTesselationShader, BlurShader* blurShader, DepthOfFieldShader* DOFShader);
 	~RenderObject();
 
-	void SetPosition(XMFLOAT3 newPosition) { position = newPosition; }
-	void SetPosition(float x, float y, float z) { SetPosition(XMFLOAT3(x, y, z)); }
-	void SetRotation(XMFLOAT3 newRotation) { rotation = newRotation; }
-	void SetRotation(float x, float y, float z) { SetRotation(XMFLOAT3(x, y, z)); }
-	void SetScale(XMFLOAT3 newScale) { scale = newScale; }
-	void SetScale(float x, float y, float z) { SetScale(XMFLOAT3(x, y, z)); }
+	// Set
+	inline void SetPosition(XMFLOAT3 newPosition) { position = newPosition; }
+	inline void SetPosition(float x, float y, float z) { SetPosition(XMFLOAT3(x, y, z)); }
+	inline void SetRotation(XMFLOAT3 newRotation) { rotation = newRotation; }
+	inline void SetRotation(float x, float y, float z) { SetRotation(XMFLOAT3(x, y, z)); }
+	inline void SetScale(XMFLOAT3 newScale) { scale = newScale; }
+	inline void SetScale(float x, float y, float z) { SetScale(XMFLOAT3(x, y, z)); }
+
+	// Get
+	inline XMFLOAT3 GetPosition() { return position; }
 
 	// Render using given shader
 	void RenderSkybox(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture);
-	void RenderObjectShader(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness);
+	void RenderObjectShader(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap);
 	void RenderDisplacement(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_displacement, ID3D11ShaderResourceView* texture_shadow);
 	void RenderGrass(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_noise_length, ID3D11ShaderResourceView* texture_noise_wind, float currentTime, float windStrength, float windFreq);	// Geometry shader
 	void RenderTexture(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture);	// Colour shader
