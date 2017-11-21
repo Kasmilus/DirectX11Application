@@ -1,5 +1,7 @@
 // Object pixel/fragment shader
 
+#define PI 3.14159265
+
 Texture2D shaderTextures[5] : register(t0); // 0 - base, 1 - normal, 2 - metallic, 3 - roughness, 4 - shadow
 SamplerState SampleType : register(s0);
 SamplerState SampleTypeClampPoint : register(s1);
@@ -129,17 +131,109 @@ float PCSS(float4 coords)
 
 
 
+// COOK TORRANCE
+
+// Fresnel reflectance(approximation by Shlick C.(1994))
+float3 Fresnel(float halfVectorAngle, float3 F0)
+{
+	return  F0 + (1 - F0) * pow(1.0f - halfVectorAngle, 5.0f);
+}
+
+// Distribution of microfacets
+
+// This is used to check if we're calculating front of the microfacet(>1) or back(<=0) which shouldn't be visible
+float chiGGX(float v)
+{
+	return v > 0 ? 1 : 0;
+}
+// This should give better results than Beckmann, especially for metal surfaces(artifacts appear when used with Cook-Torrance geometry shadowing)
+float GGXDistribution(float halfVectorAngle, float roughness)
+{
+	float rougnessSquared = roughness * roughness;
+	float halfVectorSquared = halfVectorAngle * halfVectorAngle;
+
+	float den = halfVectorSquared * rougnessSquared + (1.0f - halfVectorSquared);
+
+	return (chiGGX(halfVectorAngle) * rougnessSquared) / (PI * den * den);
+}
+
+float BeckmannDistribution(float halfVectorAngle, float roughness)
+{
+	float roughnessSquared = roughness * roughness;
+	float halfVectorSquared = halfVectorAngle * halfVectorAngle;
+
+	float numerator = 1.0f / (4.0f * roughnessSquared * pow(halfVectorAngle, 4.0f));
+	float denominator = (halfVectorSquared - 1.0f) / (roughnessSquared * halfVectorSquared);
+
+	return numerator * exp(denominator);
+}
+
+// Geometry function
+
+float GGX_PartialGeometryTerm(float3 viewVector, float3 normalVector, float3 halfVector, float roughness)
+{
+	float viewHalfVectorAngle = saturate(dot(viewVector, halfVector));
+	float chi = chiGGX(viewHalfVectorAngle / saturate(dot(viewVector, normalVector)));
+	float viewHalfVectorAngleSquared = viewHalfVectorAngle * viewHalfVectorAngle;
+	float tan2 = (1.0f - viewHalfVectorAngleSquared) / viewHalfVectorAngleSquared;
+	return (chi * 2.0f) / (1.0f + sqrt(1.0f + roughness * roughness * tan2));
+}
+
+float CookTorranceGeometry(float halfVectorAngle, float lightVectorAngle, float lightHalfVectorAngle)
+{
+	float twoHalfVector = 2.0f * halfVectorAngle;
+
+	// We will pick lower of the 2
+	float halfVectorFunction = (twoHalfVector * halfVectorAngle) / lightHalfVectorAngle;
+	float fullVectorFunction = (twoHalfVector * lightVectorAngle) / lightHalfVectorAngle;
+
+	return min(1.0, min(halfVectorFunction, fullVectorFunction));
+}
+
+// PBR - Cook-Torrance
+
+float3 CookTorrance(float3 materialDiffuseColor,
+	float3 materialSpecularColor,
+	float3 normal,
+	float3 lightDir,
+	float3 viewDir,
+	float3 lightColor)
+{
+	// indices of refraction between air and shader object
+	float ior = 0.1f;	
+	float metallic = 0;
+	float roughness = 0.8f;
+	float k = 0.05f;
 
 
+	float lightDirAngle = saturate(dot(normal, lightDir));
+	float3 Rs = 0.0;
+	if (lightDirAngle > 0)
+	{
+		float3 halfVector = normalize(lightDir + viewDir);
+		float halfVectorAngle = saturate(dot(normal, halfVector));
+		float viewDirAngle = saturate(dot(normal, viewDir));
+		float lightHalfVectorAngle = saturate(dot(lightDir, halfVector));
+		float lightVectorAngle = saturate(dot(normal, lightDir));
 
+		// Calculate reflectance
+		float3 F0 = abs((1.0 - ior) / (1.0 + ior));	// Actual formula to calculate that is ( (n1 - n2) / (n1 + n2) )^2 but here we use approximation
+		F0 = F0 * F0;
+		F0 = lerp(F0, materialDiffuseColor.rgb, metallic); // Shlick's formula is used only for materials like plastic, this line will help simulate metallic surfaces aswell
+		float3 F = Fresnel(halfVectorAngle, F0);
 
+		// Microfacet distribution
+		//float D = BeckmannDistribution(halfVectorAngle, roughness);
+		float D = GGXDistribution(halfVectorAngle, roughness);
 
+		// Geometry function
+		//float G = CookTorranceGeometry(halfVectorAngle, lightVectorAngle, lightHalfVectorAngle);
+		float G = GGX_PartialGeometryTerm(viewDir, normal, halfVector, roughness);
 
-
-
-
-
-
+		Rs = (D * F * G) / (PI * lightDirAngle * viewDirAngle);
+	}
+	return materialDiffuseColor * lightColor * lightDirAngle + lightColor * materialSpecularColor * lightDirAngle * (k + Rs * (1.0 - k));
+}
 
 
 
@@ -216,10 +310,9 @@ float4 main(InputType input) : SV_TARGET
 			float3 halfVector = normalize(lightDir + input.viewDirection);
 			lightIntensity = saturate(dot(normal, halfVector));
 
-			*/
+			
 			//lightIntensity = 1;	// testing shadows
 
-			// COOK - TORRANCE
 
 
 
@@ -237,15 +330,21 @@ float4 main(InputType input) : SV_TARGET
 				float specularPower = 10;	// That should come from light
 				specular = pow(saturate(dot(reflection, input.viewDirection)), specularPower);
 			}
+			*/
 		}
 	//}
 	// ----- LIGHTING ----- //
-	
+		float3 normal = (normalSample.x * input.tangent) + (normalSample.y * input.binormal) + (normalSample.z * input.normal);
+		//normal = normalSample;
+		normal = normalize(normal);
+		float3 lightDir = input.viewDirection - lightPosition;
+
 
 	// Final colour calculations
 
 	ambientColour = saturate(baseColour * lightAmbientColour);
-	lightingColour = saturate(baseColour * lightDiffuseColour * lightIntensity);
+	//lightingColour = saturate(baseColour * lightDiffuseColour * lightIntensity);
+	lightingColour = float4(CookTorrance(baseColour, lightDiffuseColour, normal, lightDir, input.viewDirection, lightDiffuseColour), 1);
 	specular = specular * metallic;
 	colour = saturate(lightingColour + specular + ambientColour);
 	//colour = saturate(lightingColour + ambientColour);
