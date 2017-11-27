@@ -8,7 +8,7 @@ class SkyboxMesh : public BaseMesh
 {
 
 public:
-	SkyboxMesh(ID3D11Device* device, ID3D11DeviceContext* deviceContext, int resolution = 20);
+	SkyboxMesh(ID3D11Device* device, ID3D11DeviceContext* deviceContext);
 	~SkyboxMesh();
 
 protected:

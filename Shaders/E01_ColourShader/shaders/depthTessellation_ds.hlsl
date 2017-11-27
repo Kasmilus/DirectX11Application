@@ -61,7 +61,7 @@ OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, c
 	// Sample displacement map
 	float height = displacementTexture.SampleLevel(SampleType, output.tex, mipLevel).x;
 	// Offset vertex along the normal
-	vertexPosition += float4((4 * (height - 1.0f)) * output.normal, 0.0f);
+	vertexPosition += (4 * (height - 1.0f)) * output.normal;
 
 
 	// Calculate the position of the new vertex against the world, view, and projection matrices.

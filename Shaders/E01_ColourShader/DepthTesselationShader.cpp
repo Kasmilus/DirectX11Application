@@ -117,7 +117,7 @@ void DepthTesselationShader::initShader(WCHAR* vsFilename, WCHAR* hsFilename, WC
 	loadDomainShader(dsFilename);
 }
 
-void DepthTesselationShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, float focalDistance, float focalRange, ID3D11ShaderResourceView* texture_displacement, XMFLOAT3 cameraPosition)
+void DepthTesselationShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, float focalDistance, float focalRange, ID3D11ShaderResourceView* texture_displacement, XMFLOAT3 cameraPosition, float minTessFactor, float maxTessFactor, float minTessDist, float maxTessDist)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -143,10 +143,10 @@ void DepthTesselationShader::setShaderParameters(ID3D11DeviceContext* deviceCont
 	// Tessellation
 	result = deviceContext->Map(tessellationBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	tessellationPtr = (TessellationBufferType*)mappedResource.pData;
-	tessellationPtr->minTesselationDistance = 30;
-	tessellationPtr->maxTesselationDistance = 5;
-	tessellationPtr->minTesselationFactor = 1;
-	tessellationPtr->maxTesselationFactor = 8;
+	tessellationPtr->minTesselationDistance = minTessDist;
+	tessellationPtr->maxTesselationDistance = maxTessDist;
+	tessellationPtr->minTesselationFactor = minTessFactor;
+	tessellationPtr->maxTesselationFactor = maxTessFactor;
 	deviceContext->Unmap(tessellationBuffer, 0);
 	deviceContext->VSSetConstantBuffers(1, 1, &tessellationBuffer);
 	// Camera position

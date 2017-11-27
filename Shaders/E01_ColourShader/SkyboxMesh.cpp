@@ -1,9 +1,9 @@
 #include "SkyboxMesh.h"
 
 // Initialise vertex data, buffers and load texture.
-SkyboxMesh::SkyboxMesh(ID3D11Device* device, ID3D11DeviceContext* deviceContext, int lresolution)
+SkyboxMesh::SkyboxMesh(ID3D11Device* device, ID3D11DeviceContext* deviceContext)
 {
-	resolution = lresolution;
+	resolution = 1;
 	initBuffers(device);
 }
 

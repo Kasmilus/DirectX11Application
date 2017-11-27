@@ -28,8 +28,8 @@ OutputType main(InputType input)
 
 
 	// Calculate the position of the vertex against the world, view, and projection matrices.
-	//output.position = mul(input.position, worldMatrix);
-	output.position = mul(input.position, viewMatrix);
+	output.position = mul(input.position, worldMatrix);
+    output.position = mul(output.position, viewMatrix);
 	output.position = mul(output.position, projectionMatrix);
 
 	// Store the texture coordinates for the pixel shader.

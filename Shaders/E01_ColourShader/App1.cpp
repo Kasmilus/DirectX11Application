@@ -21,10 +21,25 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	this->screenWidth = screenWidth;
 	this->screenHeight = screenHeight;
+	// Default values for controlling shaders
 	currentTime = 0;
+	// Wind
 	windStrength = 0.45f;
 	windFreq = 0.2f;
-
+	// Tessellation
+	minTessFactor = 1;
+	maxTessFactor = 4;
+	minTessDist = 50;
+	maxTessDist = 5;
+	// Depth of field
+	focalDistance = 0.77f;
+	focalRange = 0.55f;
+	focalDistanceChangeSpeed = 0.5f;
+	focalRangeChangeSpeed = 2.0f;
+	// Shadow maps quality
+	shadowMapSize = XMFLOAT2(1024, 1024);
+	dirShadowMapQuality = 2;
+	pointShadowMapQuality = 2;
 
 	// TEXTURES
 	textureMgr->loadTexture("object_base", L"../res/PBR/RustedIron/rustediron-streaks_basecolor.png");
@@ -46,7 +61,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	// MESHES
 	skyboxMesh = new SkyboxMesh(renderer->getDevice(), renderer->getDeviceContext());
-	floorMesh = new MyTesselationPlane(renderer->getDevice(), renderer->getDeviceContext());
+	floorMesh = new MyTesselationPlane(renderer->getDevice(), renderer->getDeviceContext(), 25);
 	objectMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/dwarf.obj");
 	sphereMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/sphere.obj");
 	grassGeometryMesh = new PlaneMesh(renderer->getDevice(), renderer->getDeviceContext(), 50);
@@ -58,11 +73,45 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	grassGeometryShader = new GeometryShader(renderer->getDevice(), hwnd);
 
 	// LIGHTS
-	pointLight = new Light();
-	pointLight->setAmbientColour(0.1f, 0.1f, 0.1f, 1.0f);
-	pointLight->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
-	pointLight->setPosition(-1.5f, -1.0f, -0.2f);
+	directionalLight = new MyLight(renderer);
+	directionalLight->setAmbientColour(0.1f, 0.1f, 0.1f, 1.0f);
+	directionalLight->setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
+	directionalLight->setPosition(-20.0f, 20, -5.0f);
+	directionalLight->setDirection(0.7f, -0.25f, 0.4f);
+	directionalLight->SetDirectional(true);
 
+	MyLight* light = new MyLight(renderer);
+	light->setDiffuseColour(2.0f, 0.0f, 0.0f, 1.0f);
+	light->setPosition(1.5f, -2.0f, -2.2f);
+	light->SetRadius(8);
+	light->SetAttenuation(1, 0.5f, 0.75f);
+	light->SetDirectional(false);
+	light->SetIsActive(false);
+	lights.push_back(light);
+	MyLight* light2 = new MyLight(renderer);
+	light2->setDiffuseColour(0.0f, 5.0f, 0.0f, 1.0f);
+	light2->setPosition(1.5f, 2.0f, 3.2f);
+	light2->SetRadius(9);
+	light2->SetAttenuation(1, 0.5f, 1.45f);
+	light2->SetDirectional(false);
+	light2->SetIsActive(false);
+	lights.push_back(light2);
+	MyLight* light3 = new MyLight(renderer);
+	light3->setDiffuseColour(0.0f, 0.0f, 6.0f, 1.0f);
+	light3->setPosition(-8.5f, 0.25f, 5.2f);
+	light3->SetRadius(6);
+	light3->SetAttenuation(1, 0.1f, 1.45f);
+	light3->SetDirectional(false);
+	light3->SetIsActive(false);
+	lights.push_back(light3);
+	MyLight* light4 = new MyLight(renderer);
+	light4->setDiffuseColour(8.0f, 8.0f, 0.0f, 1.0f);
+	light4->setPosition(2, 4.0f, 1);
+	light4->SetRadius(5);
+	light4->SetAttenuation(1, 0.3f, 0);
+	light4->SetDirectional(false);
+	light4->SetIsActive(false);
+	lights.push_back(light4);
 
 	// Render to texture
 	// OrthoMesh and shader set for different renderTarget
@@ -71,9 +120,6 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	blurTextureDownSampled = new RenderTexture(renderer->getDevice(), screenWidth / 2, screenHeight / 2, SCREEN_NEAR, SCREEN_DEPTH);
 	blurTextureUpSampled = new RenderTexture(renderer->getDevice(), screenWidth, screenHeight, SCREEN_NEAR, SCREEN_DEPTH);
 	DOFTexture = new RenderTexture(renderer->getDevice(), screenWidth, screenHeight, SCREEN_NEAR, SCREEN_DEPTH);
-	shadowMapTexture = new RenderTexture(renderer->getDevice(), 1024, 1024, SCREEN_NEAR, SCREEN_DEPTH);
-	// Reflection cubemap
-	sphereReflectionCubemap = new RenderTextureCubemap(renderer->getDevice(), SCREEN_NEAR, SCREEN_DEPTH);
 
 	// ortho size and position set based on window size
 	// 200x200 pixels (standard would be matching window size for fullscreen mesh
@@ -89,7 +135,9 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	skybox = new RenderObject(skyboxMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 	floor = new RenderObject(floorMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 	floor->SetPosition(-15, -5, -10);
-	floor->SetScale(0.25f, 0.25f, 0.25f);
+	floor->SetScale(1.2f, 0.25f, 1.2f);
+	//floor->SetPosition(-1, -5, -10);
+	//floor->SetScale(0.1f, 0.1f, 0.1f);
 	dwarf = new RenderObject(objectMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 	sphere = new RenderObject(sphereMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 	sphere->SetPosition(-5, 0, 0);
@@ -98,7 +146,11 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	grass->SetScale(0.3f, 0.3f, 0.3f);
 	orthoMeshObj = new RenderObject(orthoMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 
-
+	// Set defualt shader params for objects
+	floor->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
+	dwarf->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
+	sphere->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
+	floor->SetTesselationQuality(minTessFactor, maxTessFactor, minTessDist, maxTessDist);
 }
 
 
@@ -204,7 +256,8 @@ bool App1::frame()
 
 	// Handle input
 	ControlScene();
-
+	// Update camera, lights
+	UpdateObjects();
 	// Render the graphics.
 	result = render();
 	if (!result)
@@ -217,148 +270,115 @@ bool App1::frame()
 
 bool App1::render()
 {
-	// Update camera and dynamic lights matrices
-	camera->update();
-	pointLight->generateProjectionMatrix(SCREEN_NEAR, SCREEN_DEPTH);
-	pointLight->generateViewMatrix();
-
 	// get world view projection matrices
 	worldMatrix = renderer->getWorldMatrix();
 	viewMatrix = camera->getViewMatrix();
 	projectionMatrix = renderer->getProjectionMatrix();
 
-	// Skybox pos
-	skybox->SetPosition(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
+	// Render GUI texture
+	if (renderer->getWireframeState())
+	{
+		renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
+		renderScene(worldMatrix, viewMatrix, projectionMatrix);
+	}
+	else
+	{
+		// Shadow map
+		renderShadowMaps();
 
-	// Shadow map
-	renderShadowMapToTexture();
+		// Scene
+		renderDepthToTexture();
+		renderSceneToTexture();
 
-	// Scene
-	renderDepthToTexture();
-	renderSceneToTexture();
+		worldMatrix = renderer->getWorldMatrix();
+		viewMatrix = camera->getViewMatrix();
+		projectionMatrix = renderer->getProjectionMatrix();
 
-	renderScene();
+		renderPostProcessingToTexture();
+
+		renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
+		renderSceneWithPostProcessing();	// Post processing
+	}
+
+	gui();	// GUI
+	renderer->endScene();
 
 	return true;
 }
 
-void App1::renderShadowMapToTexture()
+// Renders depth from each light's point of view(single ortho for directional, cubemap projection for point lights)
+void App1::renderShadowMaps()
 {
-	shadowMapTexture->setRenderTarget(renderer->getDeviceContext());
-	shadowMapTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
-
-	// get world view projection matrices from light point position
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
-	worldMatrix = renderer->getWorldMatrix();
-	viewMatrix = pointLight->getViewMatrix();
-	projectionMatrix = pointLight->getProjectionMatrix();
-
-	// Dwarf
-	dwarf->RenderDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
-	sphere->RenderDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
-	// Floor
-	floor->RenderTesselationDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
+	directionalLight->UpdateShadowMap(renderer, std::bind(&App1::renderShadowMapScene, this, _1, _2, _3));
+	for each (MyLight* light in lights)
+	{
+		light->UpdateShadowMap(renderer, std::bind(&App1::renderShadowMapScene, this, _1, _2, _3));
+	}
 	
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
 	renderer->setBackBufferRenderTarget();
 }
 
+void App1::renderShadowMapScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)
+{
+	// Dwarf
+	dwarf->RenderDepth(renderer->getDeviceContext(), world, view, projection, focalDistance, focalRange);
+	// Sphere
+	sphere->RenderDepth(renderer->getDeviceContext(), world, view, projection, focalDistance, focalRange);
+	// Floor
+	floor->RenderTesselationDepth(renderer->getDeviceContext(), world, view, projection, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
+}
+
+// Renders depth from camera point of view
 void App1::renderDepthToTexture()
 {
-	// Set the render target to be the render to texture.
 	depthTexture->setRenderTarget(renderer->getDeviceContext());
-	// Clear the render to texture.
-	depthTexture->clearRenderTarget(renderer->getDeviceContext(), 1.0f, 1.0f, 0.0f, 1.0f);
+	depthTexture->clearRenderTarget(renderer->getDeviceContext(), 1.0f, 1.0f, 1.0f, 1.0f);
 
-	// Dwarf
-	dwarf->RenderDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
-	sphere->RenderDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange);
-	// Floor
-	floor->RenderTesselationDepth(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, focalDistance, focalRange, textureMgr->getTexture("brick_height"), camera->getPosition());
-	
-	// Reset the render target back to the original back buffer and not the render to texture anymore.
+	renderShadowMapScene(worldMatrix, viewMatrix, projectionMatrix);
+
 	renderer->setBackBufferRenderTarget();
 }
 
 void App1::renderSphereCubemap()
 {
-	// Needed to Calculate view matrix
-	XMVECTOR pos, lookAt, up;
-	pos = XMLoadFloat3(&sphere->GetPosition());
-	worldMatrix = renderer->getWorldMatrix();
-	projectionMatrix = sphereReflectionCubemap->getProjectionMatrix();
-	float x = sphere->GetPosition().x;
-	float y = sphere->GetPosition().y;
-	float z = sphere->GetPosition().z;
-	// Define directions
-	XMFLOAT3 lookAtTargets[6] = {
-		XMFLOAT3(x + 1, y, z),
-		XMFLOAT3(x - 1, y, z),
-			 XMFLOAT3(x, y + 1, z),
-			 XMFLOAT3(x, y - 1, z),
-			 XMFLOAT3(x, y, z + 1),
-			 XMFLOAT3(x, y, z - 1)
-	};
-	XMFLOAT3 upVectors[6] = {
-		 XMFLOAT3(0, 1, 0),
-			 XMFLOAT3(0, 1, 0),
-			 XMFLOAT3(0, 0, -1),
-			 XMFLOAT3(0, 0, 1),
-			 XMFLOAT3(0, 1, 0),
-			 XMFLOAT3(0, 1, 0),
-	};
+	// Render reflection cubemap(pass function pointer)
 	skybox->SetPosition(sphere->GetPosition());
-	for (int i = 0; i < 6; ++i)
-	{
-		// Define look and up vectors for that face of the cubemap 
-		lookAt = XMVectorSet(lookAtTargets[i].x, lookAtTargets[i].y, lookAtTargets[i].z, 1.0f);
-		up = XMVectorSet(upVectors[i].x, upVectors[i].y, upVectors[i].z, 1.0f);
-
-		viewMatrix = XMMatrixLookAtLH(pos, lookAt, up);
-
-		sphereReflectionCubemap->setRenderTarget(renderer->getDeviceContext(), i);
-		sphereReflectionCubemap->clearRenderTarget(renderer->getDeviceContext(), i, 0.0f, 0.0f, 1.0f, 1.0f);
-
-		renderSceneToScreen();	// it's rendering with sphere, change that later
-	}
-
+	sphere->UpdateReflectionCubemap(renderer, std::bind(&App1::renderScene, this, _1, _2, _3));
 	skybox->SetPosition(camera->getPosition());
-
-	// Set WVP matrices back to normal
-	viewMatrix = camera->getViewMatrix();
-	projectionMatrix = renderer->getProjectionMatrix();
 
 	renderer->setBackBufferRenderTarget();
 }
 
 void App1::renderSceneToTexture()
 {
+	// Render reflection maps
 	renderSphereCubemap();
 
+	// Render the scene
 	sceneTextureCurrent->setRenderTarget(renderer->getDeviceContext());
 	sceneTextureCurrent->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
 
-	renderSceneToScreen();
+	renderScene(worldMatrix, viewMatrix, projectionMatrix);
 
 	renderer->setBackBufferRenderTarget();
 }
 // Render objects without any post-processing effects
-void App1::renderSceneToScreen()
+void App1::renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)
 {
 	// Render dwarf
-	dwarf->RenderObjectShader(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), textureMgr->getTexture("skybox"));
+	dwarf->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), textureMgr->getTexture("skybox"));
 	// Render sphere
-	sphere->RenderObjectShader(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), sphereReflectionCubemap->getShaderResourceView());
+	sphere->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
 	// Render floor
-	floor->RenderDisplacement(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, camera->getPosition(), pointLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), shadowMapTexture->getShaderResourceView());
+	floor->RenderDisplacement(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), textureMgr->getTexture("skybox"));
 	// Render grass
-	grass->RenderGrass(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("grass_base"), textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
+	grass->RenderGrass(renderer->getDeviceContext(), world, view, projection, textureMgr->getTexture("grass_base"), textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
 	// Render skybox
-	skybox->RenderSkybox(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture("skybox"));
-	//skybox->RenderSkybox(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, sphereReflectionCubemap->getShaderResourceView());
+	skybox->RenderSkybox(renderer->getDeviceContext(), world, view, projection, textureMgr->getTexture("skybox"));
 }
 
-void App1::renderFinalPostProcessing()
+void App1::renderPostProcessingToTexture()
 {
 	// Blur down sampled texture
 	blurTextureDownSampled->setRenderTarget(renderer->getDeviceContext());
@@ -380,37 +400,7 @@ void App1::renderFinalPostProcessing()
 	renderer->setBackBufferRenderTarget();
 }
 
-void App1::renderScene()
-{
-	// Get the world, view, and projection matrices from the camera and d3d objects.
-	worldMatrix = renderer->getWorldMatrix();
-	viewMatrix = camera->getViewMatrix();
-	projectionMatrix = renderer->getProjectionMatrix();
-
-	renderFinalPostProcessing();
-
-	//// Clear the scene. (default blue colour)
-	renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
-	
-
-	// Render GUI texture
-	if (!renderer->getWireframeState())
-	{
-		renderGUITexture();
-	}
-	else
-	{
-		renderSceneToScreen();
-	}
-
-	// Render GUI
-	gui();
-
-	//// Present the rendered scene to the screen.
-	renderer->endScene();
-}
-
-void App1::renderGUITexture() {
+void App1::renderSceneWithPostProcessing() {
 	// To render ortho mesh
 
 	// pick texture to render
@@ -418,14 +408,12 @@ void App1::renderGUITexture() {
 	if (postProcessingOn)
 	{
 		targetResourceView = DOFTexture->getShaderResourceView();
-		//targetResourceView = shadowMapTexture->getShaderResourceView();
 	}
 	else
 	{
-		//targetResourceView = shadowMapTexture->getShaderResourceView();
 		targetResourceView = sceneTextureCurrent->getShaderResourceView();
 	}
-	//targetResourceView = shadowMapTexture->getShaderResourceView();
+	//targetResourceView = directionalLight->GetShadowResourceView();
 	// ortho matrix for 2D rendering
 	orthoMatrix = renderer->getOrthoMatrix();
 	orthoViewMatrix = camera->getOrthoViewMatrix();
@@ -441,7 +429,7 @@ void App1::renderGUITexture() {
 void App1::gui()
 {
 	// Force turn off on Geometry shader
-	//renderer->getDeviceContext()->GSSetShader(NULL, NULL, 0);
+	renderer->getDeviceContext()->GSSetShader(NULL, NULL, 0);
 
 	// Build UI
 	ImGui::Text("FPS: %.2f\n", timer->getFPS());
@@ -465,13 +453,30 @@ void App1::gui()
 void App1::ControlScene()
 {
 	// Light controls
-	if (input->isKeyDown('X'))
+	float pointLightSpeed = 5 * timer->getTime();
+	if (input->isKeyDown('J'))
 	{
-		pointLight->setPosition(pointLight->getPosition().x + timer->getTime() * 2, pointLight->getPosition().y + timer->getTime() * 2, pointLight->getPosition().z);
+		lights[0]->setPosition(lights[0]->getPosition().x - pointLightSpeed, lights[0]->getPosition().y, lights[0]->getPosition().z);
 	}
-	if (input->isKeyDown('Z'))
+	else if (input->isKeyDown('L'))
 	{
-		pointLight->setPosition(pointLight->getPosition().x - timer->getTime() * 2, pointLight->getPosition().y - timer->getTime() * 2, pointLight->getPosition().z);
+		lights[0]->setPosition(lights[0]->getPosition().x + pointLightSpeed, lights[0]->getPosition().y, lights[0]->getPosition().z);
+	}
+	if (input->isKeyDown('U'))
+	{
+		lights[0]->setPosition(lights[0]->getPosition().x, lights[0]->getPosition().y - pointLightSpeed, lights[0]->getPosition().z);
+	}
+	else if (input->isKeyDown('O'))
+	{
+		lights[0]->setPosition(lights[0]->getPosition().x, lights[0]->getPosition().y + pointLightSpeed, lights[0]->getPosition().z);
+	}
+	if (input->isKeyDown('K'))
+	{
+		lights[0]->setPosition(lights[0]->getPosition().x, lights[0]->getPosition().y, lights[0]->getPosition().z - pointLightSpeed);
+	}
+	else if (input->isKeyDown('I'))
+	{
+		lights[0]->setPosition(lights[0]->getPosition().x, lights[0]->getPosition().y, lights[0]->getPosition().z + pointLightSpeed);
 	}
 
 	// Sphere controls
@@ -542,10 +547,21 @@ void App1::ControlScene()
 	wasPKeyDownLastFrame = input->isKeyDown('P');
 
 	// Toggle wire frame mode
-	if (input->isKeyDown('I') && !wasIKeyDownLastFrame)
+	if (input->isKeyDown('M') && !wasIKeyDownLastFrame)
 	{
 		renderer->setWireframeMode(!renderer->getWireframeState());
 	}
-	wasIKeyDownLastFrame = input->isKeyDown('I');
+	wasIKeyDownLastFrame = input->isKeyDown('M');
+}
+
+void App1::UpdateObjects()
+{
+	camera->update();
+	skybox->SetPosition(camera->getPosition().x, camera->getPosition().y, camera->getPosition().z);
+	directionalLight->UpdateMatrices(screenWidth, screenHeight);
+	for each (MyLight* light in lights)
+	{
+		light->UpdateMatrices(screenWidth, screenHeight);
+	}
 }
 

@@ -5,6 +5,8 @@ cbuffer MatrixBuffer : register(cb0)
 	matrix worldMatrix;
 	matrix viewMatrix;
 	matrix projectionMatrix;
+    matrix lightViewMatrix;
+    matrix lightProjectionMatrix;
 };
 
 cbuffer CameraBuffer : register(cb1)
@@ -30,8 +32,8 @@ struct OutputType
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
 	float3 viewDirection : TEXCOORD1;
-	float4 lightViewPosition : TEXCOORD2;	// THIS IS NOT SET YET
-	float3 lightPos : TEXCOORD3;	// SAME
+	float4 lightViewPosition : TEXCOORD2;
+    float3 pos : TEXCOORD3;
 };
 
 OutputType main(InputType input)
@@ -44,6 +46,7 @@ OutputType main(InputType input)
 	// Calculate the position of the vertex against the world, view, and projection matrices.
 	output.position = mul(input.position, worldMatrix);
 	output.viewDirection = normalize(cameraPosition - output.position);	// Set view direction
+    output.pos = output.position;
 	output.position = mul(output.position, viewMatrix);
 	output.position = mul(output.position, projectionMatrix);
 
@@ -57,6 +60,12 @@ OutputType main(InputType input)
 	output.tangent = normalize(output.tangent);
 	output.binormal = mul(input.binormal, (float3x3)worldMatrix);	// Binormal
 	output.binormal = normalize(output.binormal);
+
+    // Calculate vertex position from light point of view
+    output.lightViewPosition = mul(input.position, worldMatrix);
+    output.lightViewPosition = mul(output.lightViewPosition, lightViewMatrix);
+    output.lightViewPosition = mul(output.lightViewPosition, lightProjectionMatrix);
+
 
 	return output;
 }

@@ -50,12 +50,13 @@ DisplacementShader::~DisplacementShader()
 	BaseShader::~BaseShader();
 }
 
-void DisplacementShader::initShader(WCHAR* vsFilename,  WCHAR* psFilename)
+void DisplacementShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 {
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_BUFFER_DESC tessellationBufferDesc;
 	D3D11_BUFFER_DESC cameraBufferDesc;
 	D3D11_BUFFER_DESC lightBufferDesc;
+	D3D11_BUFFER_DESC shadowMapBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
 	D3D11_SAMPLER_DESC samplerComparisonDesc;
 
@@ -95,8 +96,18 @@ void DisplacementShader::initShader(WCHAR* vsFilename,  WCHAR* psFilename)
 	lightBufferDesc.MiscFlags = 0;
 	lightBufferDesc.StructureByteStride = 0;
 	renderer->CreateBuffer(&lightBufferDesc, NULL, &lightBuffer);
+	// --- SHADOW MAP --- //
+	renderer->CreateBuffer(&lightBufferDesc, NULL, &shadowMapBuffer);
+	shadowMapBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	shadowMapBufferDesc.ByteWidth = sizeof(ShadowMapBufferType);
+	shadowMapBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	shadowMapBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	shadowMapBufferDesc.MiscFlags = 0;
+	shadowMapBufferDesc.StructureByteStride = 0;
+	renderer->CreateBuffer(&shadowMapBufferDesc, NULL, &shadowMapBuffer);
 
-	// Create a texture sampler state description.
+	// --- SAMPLERS --- //
+	// Regular
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -110,21 +121,18 @@ void DisplacementShader::initShader(WCHAR* vsFilename,  WCHAR* psFilename)
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	// Create the texture sampler state.
 	renderer->CreateSamplerState(&samplerDesc, &sampleState);
 
-	// Required a CLAMPED sampler for sampling the depth map
+	// CLAMPED sampler for sampling the depth map
 	//samplerDesc.Filter = D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	// Create the texture sampler state.
 	renderer->CreateSamplerState(&samplerDesc, &sampleStateClampPoint);
 
-	// Required a CLAMPED sampler for sampling the depth map
-	samplerComparisonDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT; // D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT
+	// Comparison sampler
+	samplerComparisonDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
 	samplerComparisonDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	// Create the texture sampler state.
 	renderer->CreateSamplerState(&samplerComparisonDesc, &sampleStateComparison);
 
 }
@@ -140,7 +148,7 @@ void DisplacementShader::initShader(WCHAR* vsFilename, WCHAR* hsFilename, WCHAR*
 }
 
 
-void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_displacement, ID3D11ShaderResourceView* texture_shadow)
+void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_displacement, ID3D11ShaderResourceView* texture_envCubemap, float minTessFactor, float maxTessFactor, float minTessDist, float maxTessDist, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -148,14 +156,17 @@ void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 	CameraBufferType* cameraDataPtr;
 	TessellationBufferType* tessellationPtr;
 	LightBufferType* lightDataPtr;
+	ShadowMapBufferType* shadowMapDataPtr;
 	XMMATRIX tworld, tview, tproj, tLightViewMatrix, tLightProjectionMatrix;
+	ID3D11ShaderResourceView* shadowMaps[4] = { nullptr, nullptr, nullptr, nullptr };
+	ID3D11ShaderResourceView* directionalShadowMap = directionalLight->GetShadowResourceView();
 
 	// Transpose the matrices to prepare them for the shader.
 	tworld = XMMatrixTranspose(worldMatrix);
 	tview = XMMatrixTranspose(viewMatrix);
 	tproj = XMMatrixTranspose(projectionMatrix);
-	tLightViewMatrix = XMMatrixTranspose(light->getViewMatrix());
-	tLightProjectionMatrix = XMMatrixTranspose(light->getProjectionMatrix());
+	tLightViewMatrix = XMMatrixTranspose(directionalLight->getViewMatrix());
+	tLightProjectionMatrix = XMMatrixTranspose(directionalLight->getProjectionMatrix());
 	// matrix
 	result = deviceContext->Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	matrixDataPtr = (MatrixBufferType*)mappedResource.pData;
@@ -168,10 +179,10 @@ void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 	// Tessellation
 	result = deviceContext->Map(tessellationBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	tessellationPtr = (TessellationBufferType*)mappedResource.pData;
-	tessellationPtr->minTesselationDistance = 30;
-	tessellationPtr->maxTesselationDistance = 5;
-	tessellationPtr->minTesselationFactor = 1;
-	tessellationPtr->maxTesselationFactor = 8;
+	tessellationPtr->minTesselationDistance = minTessDist;
+	tessellationPtr->maxTesselationDistance = maxTessDist;
+	tessellationPtr->minTesselationFactor = minTessFactor;
+	tessellationPtr->maxTesselationFactor = maxTessFactor;
 	deviceContext->Unmap(tessellationBuffer, 0);
 	// Camera position
 	result = deviceContext->Map(cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -182,11 +193,38 @@ void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 	// Light
 	result = deviceContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	lightDataPtr = (LightBufferType*)mappedResource.pData;
-	lightDataPtr->ambientColour = light->getAmbientColour();
-	lightDataPtr->diffuseColour = light->getDiffuseColour();
-	lightDataPtr->lightPosition = light->getPosition();
+	// Directional
+	lightDataPtr->lightAmbientColour = directionalLight->getAmbientColour();
+	lightDataPtr->lightDiffuseColour = directionalLight->getDiffuseColour();
+	lightDataPtr->lightDirection = directionalLight->getDirection();
 	lightDataPtr->padding = 0;
+	// Point lights
+	int numberOfLights = lights.size() > 4 ? 4 : lights.size();	// Use number of lights provided or only first 4 if there's more than that
+	for (int i = 0; i < numberOfLights; ++i)
+	{
+		// Light
+		if(lights[i]->IsActive())
+			lightDataPtr->pointLight[i].isActive = 1;
+		else
+			lightDataPtr->pointLight[i].isActive = 0;
+		XMFLOAT3 pos = lights[i]->getPosition();
+		lightDataPtr->pointLight[i].lightPositionAndRadius = XMFLOAT4(pos.x, pos.y, pos.z, lights[i]->GetRadius());
+		lightDataPtr->pointLight[i].lightAmbientColour = lights[i]->getAmbientColour();
+		lightDataPtr->pointLight[i].lightDiffuseColour = lights[i]->getDiffuseColour();
+		lightDataPtr->pointLight[i].lightAttenuation = lights[i]->GetAttenuation();
+
+		// Shadow map
+		shadowMaps[i] = lights[i]->GetShadowResourceView();
+	}
 	deviceContext->Unmap(lightBuffer, 0);
+
+	// Shadow map quality
+	result = deviceContext->Map(shadowMapBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	shadowMapDataPtr = (ShadowMapBufferType*)mappedResource.pData;
+	shadowMapDataPtr->shadowMapSize = shadowMapSize;
+	shadowMapDataPtr->directionalShadowMapQuality = dirShadowMapQuality;
+	shadowMapDataPtr->pointShadowMapQuality = pointShadowMapQuality;
+	deviceContext->Unmap(shadowMapBuffer, 0);
 
 	// --- VERTEX SHADER --- //
 	deviceContext->VSSetConstantBuffers(0, 1, &matrixBuffer);
@@ -202,13 +240,27 @@ void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 	deviceContext->DSSetShaderResources(0, 1, &texture_displacement);	// Displacement texture
 
 	// --- PIXEL SHADER --- //
-	
+
 	deviceContext->PSSetConstantBuffers(0, 1, &lightBuffer);
+	deviceContext->PSSetConstantBuffers(1, 1, &shadowMapBuffer);
 
 
 	// Set shader texture resource in the pixel shader.
-	ID3D11ShaderResourceView* textureArray[5] = { texture_base, texture_normal, texture_metallic, texture_roughness, texture_shadow };
-	deviceContext->PSSetShaderResources(0, 5, textureArray);
+	// Set shader texture resource in the pixel shader.
+	deviceContext->PSSetShaderResources(0, 1, &texture_base);
+	deviceContext->PSSetShaderResources(1, 1, &texture_normal);
+	deviceContext->PSSetShaderResources(2, 1, &texture_metallic);
+	deviceContext->PSSetShaderResources(3, 1, &texture_roughness);
+	deviceContext->PSSetShaderResources(4, 1, &texture_envCubemap);
+	deviceContext->PSSetShaderResources(5, 1, &directionalShadowMap);
+	if (shadowMaps[0])
+		deviceContext->PSSetShaderResources(6, 1, &shadowMaps[0]);
+	if (shadowMaps[1])
+		deviceContext->PSSetShaderResources(7, 1, &shadowMaps[1]);
+	if (shadowMaps[2])
+		deviceContext->PSSetShaderResources(8, 1, &shadowMaps[2]);
+	if (shadowMaps[3])
+		deviceContext->PSSetShaderResources(9, 1, &shadowMaps[3]);
 }
 
 void DisplacementShader::render(ID3D11DeviceContext* deviceContext, int indexCount)

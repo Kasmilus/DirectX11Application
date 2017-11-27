@@ -22,6 +22,10 @@
 // Other
 #include "RenderObject.h"
 #include "RenderTextureCubemap.h"
+#include "MyLight.h"
+#include <vector>
+
+using namespace std::placeholders;
 
 class App1 : public BaseApplication
 {
@@ -36,15 +40,18 @@ public:
 protected:
 	bool render();
 	void renderSphereCubemap();
-	void renderShadowMapToTexture();
+	void renderShadowMaps();
+	void renderShadowMapScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection);
 	void renderDepthToTexture();
 	void renderSceneToTexture();
-	void renderSceneToScreen();	// used when wire frame is on
-	void renderFinalPostProcessing();
-	void renderGUITexture();
-	void renderScene();
+	void renderPostProcessingToTexture();
+	void renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection);
+	void renderSceneWithPostProcessing();
 	void gui();
 	void ControlScene();
+
+	// Update dynamic object positions(camera, lights, skybox)
+	void UpdateObjects();
 
 private:
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, orthoMatrix, orthoViewMatrix;
@@ -66,7 +73,8 @@ private:
 	MyBaseMesh* objectMesh;
 	BaseMesh* grassGeometryMesh;
 
-	Light* pointLight;
+	MyLight* directionalLight;
+	std::vector<MyLight*> lights;
 
 	// Shaders
 	SkyboxShader* skyboxShader;
@@ -86,8 +94,6 @@ private:
 	RenderTexture* blurTextureDownSampled;
 	RenderTexture* blurTextureUpSampled;
 	RenderTexture* DOFTexture;
-	RenderTexture* shadowMapTexture;
-	RenderTextureCubemap* sphereReflectionCubemap;
 
 	OrthoMesh* orthoMesh;
 
@@ -96,10 +102,21 @@ private:
 	float windStrength;
 
 	// Depth of field focus variables
-	float focalDistance = 0.48f;
-	float focalRange = 2.56f;
-	float focalDistanceChangeSpeed = 0.5f;
-	float focalRangeChangeSpeed = 2.0f;
+	float focalDistance;
+	float focalRange;
+	float focalDistanceChangeSpeed;
+	float focalRangeChangeSpeed;
+
+	// Floor tessellation
+	float minTessFactor;
+	float maxTessFactor;
+	float minTessDist;
+	float maxTessDist;
+
+	// Shadow map quality
+	XMFLOAT2 shadowMapSize;
+	float dirShadowMapQuality; // 0 - no shadow, 1 - hard shadow, 2 - soft shadow
+	float pointShadowMapQuality;
 
 	bool postProcessingOn = false;
 	bool wasPKeyDownLastFrame = false;

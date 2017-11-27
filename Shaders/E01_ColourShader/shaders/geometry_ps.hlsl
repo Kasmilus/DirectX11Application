@@ -14,7 +14,7 @@ struct InputType
 float4 main(InputType input) : SV_TARGET
 {
 	float4 colour = renderTexture.Sample(sampleType,1 - input.tex);
-	//colour = float4(input.tex, 0, 0);
+	//float4 colour = float4(0, input.tex.y, 0, 0);
 
 	return colour;
 }

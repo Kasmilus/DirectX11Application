@@ -27,6 +27,55 @@ RenderObject::~RenderObject()
 {
 }
 
+void RenderObject::UpdateReflectionCubemap(D3D * renderer, std::function<void(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)> renderScene)
+{
+	if (reflectionCubemap == nullptr)
+	{
+		reflectionCubemap = new RenderTextureCubemap(renderer->getDevice(), SCREEN_NEAR, SCREEN_DEPTH);
+	}
+
+	// Needed to Calculate view matrix
+	XMVECTOR pos, lookAt, up;
+	pos = XMLoadFloat3(&GetPosition());
+	worldMatrix = renderer->getWorldMatrix();
+	projectionMatrix = reflectionCubemap->getProjectionMatrix();
+	float x = GetPosition().x;
+	float y = GetPosition().y;
+	float z = GetPosition().z;
+
+	// Define directions
+	XMFLOAT3 lookAtTargets[6] = {
+		XMFLOAT3(x + 1, y, z),
+		XMFLOAT3(x - 1, y, z),
+		XMFLOAT3(x, y + 1, z),
+		XMFLOAT3(x, y - 1, z),
+		XMFLOAT3(x, y, z + 1),
+		XMFLOAT3(x, y, z - 1)
+	};
+	XMFLOAT3 upVectors[6] = {
+		XMFLOAT3(0, 1, 0),
+		XMFLOAT3(0, 1, 0),
+		XMFLOAT3(0, 0, -1),
+		XMFLOAT3(0, 0, 1),
+		XMFLOAT3(0, 1, 0),
+		XMFLOAT3(0, 1, 0),
+	};
+	
+	for (int i = 0; i < 6; ++i)
+	{
+		// Define look and up vectors for that face of the cubemap 
+		lookAt = XMVectorSet(lookAtTargets[i].x, lookAtTargets[i].y, lookAtTargets[i].z, 1.0f);
+		up = XMVectorSet(upVectors[i].x, upVectors[i].y, upVectors[i].z, 1.0f);
+
+		viewMatrix = XMMatrixLookAtLH(pos, lookAt, up);
+
+		reflectionCubemap->setRenderTarget(renderer->getDeviceContext(), i);
+		reflectionCubemap->clearRenderTarget(renderer->getDeviceContext(), i, 0.0f, 0.0f, 1.0f, 1.0f);
+
+		renderScene(worldMatrix, viewMatrix, projectionMatrix);
+	}
+}
+
 void RenderObject::RenderSkybox(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, ID3D11ShaderResourceView * texture)
 {
 	SetWorldMatrix(world);
@@ -36,24 +85,36 @@ void RenderObject::RenderSkybox(ID3D11DeviceContext * deviceContext, XMMATRIX & 
 	skyboxShader->render(deviceContext, mesh->getIndexCount());
 }
 
-void RenderObject::RenderObjectShader(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, Light * light, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, ID3D11ShaderResourceView* texture_envCubemap)
+void RenderObject::RenderObjectShader(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, ID3D11ShaderResourceView* texture_envCubemap)
 {
+	if (texture_envCubemap == nullptr)
+	{
+		if (reflectionCubemap)
+		{
+			texture_envCubemap = reflectionCubemap->getShaderResourceView();
+		}
+		else
+		{
+			return;	// didn't pass reflection map to the shader and it wasn't generated yet - don't render(should print out some error, add later)
+		}
+	}
+
 	SetWorldMatrix(world);
 
 	MyBaseMesh* myMesh = (MyBaseMesh*)mesh;	// yeah, that's not safe but it's just so I don't have to edit framework class
 
 	myMesh->sendData(deviceContext);
-	objectShader->setShaderParameters(deviceContext, world, view, projection, cameraPosition, light, texture_base, texture_normal, texture_metallic, texture_roughness, texture_envCubemap);
+	objectShader->setShaderParameters(deviceContext, world, view, projection, cameraPosition, lights, directionalLight, texture_base, texture_normal, texture_metallic, texture_roughness, texture_envCubemap, shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
 	objectShader->render(deviceContext, myMesh->getIndexCount());
 }
 
-void RenderObject::RenderDisplacement(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, Light * light, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, ID3D11ShaderResourceView * texture_displacement, ID3D11ShaderResourceView * texture_shadow)
+void RenderObject::RenderDisplacement(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, ID3D11ShaderResourceView * texture_displacement, ID3D11ShaderResourceView* texture_envCubemap)
 {
 	SetWorldMatrix(world);
 
 	MyBaseMesh* myMesh = (MyBaseMesh*)mesh;
 	myMesh->sendData(deviceContext);
-	displacementShader->setShaderParameters(deviceContext, world, view, projection, cameraPosition, light, texture_base, texture_normal, texture_metallic, texture_roughness, texture_displacement, texture_shadow);
+	displacementShader->setShaderParameters(deviceContext, world, view, projection, cameraPosition, lights, directionalLight, texture_base, texture_normal, texture_metallic, texture_roughness, texture_displacement, texture_envCubemap, minTessFactor, maxTessFactor, minTessDist, maxTessDist, shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
 	displacementShader->render(deviceContext, myMesh->getIndexCount());
 }
 
@@ -91,7 +152,7 @@ void RenderObject::RenderTesselationDepth(ID3D11DeviceContext * deviceContext, X
 
 	MyBaseMesh* myMesh = (MyBaseMesh*)mesh;
 	myMesh->sendData(deviceContext);
-	depthTesselationShader->setShaderParameters(deviceContext, world, view, projection, focalDistance, focalRange, texture_displacement, cameraPosition);
+	depthTesselationShader->setShaderParameters(deviceContext, world, view, projection, focalDistance, focalRange, texture_displacement, cameraPosition, minTessFactor, maxTessFactor, minTessDist, maxTessDist);
 	depthTesselationShader->render(deviceContext, myMesh->getIndexCount());
 }
 

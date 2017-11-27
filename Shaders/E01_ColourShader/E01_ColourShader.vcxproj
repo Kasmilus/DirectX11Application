@@ -96,6 +96,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MyBaseMesh.cpp" />
     <ClCompile Include="MyBaseShader.cpp" />
+    <ClCompile Include="MyLight.cpp" />
     <ClCompile Include="MyModelMesh.cpp" />
     <ClCompile Include="MyTesselationPlane.cpp" />
     <ClCompile Include="ObjectShader.cpp" />
@@ -115,6 +116,7 @@
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="MyBaseMesh.h" />
     <ClInclude Include="MyBaseShader.h" />
+    <ClInclude Include="MyLight.h" />
     <ClInclude Include="MyModelMesh.h" />
     <ClInclude Include="MyTesselationPlane.h" />
     <ClInclude Include="ObjectShader.h" />

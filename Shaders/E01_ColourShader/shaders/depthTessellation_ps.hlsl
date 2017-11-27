@@ -2,7 +2,7 @@
 
 // R channel - regular depth, 0(closer to camera) - 1(further from camera)
 // G channel - focus point for depth of field blurring
-// B channel - used in shadow maps(light space projected z distance)
+// B channel - 
 
 cbuffer DOFBuffer : register(cb0)
 {
@@ -27,8 +27,8 @@ float4 main(InputType input) : SV_TARGET
 	float depth = (input.depthPosition.z / input.depthPosition.w);
 
 	// Write grayscale image, the brighter the closer to the camera
-	float DOF = saturate(abs(-depth - focalDistance) / focalRange);
-	float4 colour = float4(depth, DOF, input.depthPosition.z, 1.0f);
+    float DOF = saturate(abs(-(1 - depth) * 100 + focalDistance) / focalRange);
+    float4 colour = float4(depth, DOF, depth, 1.0f);
 
 	return colour;
 }

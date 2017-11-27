@@ -64,7 +64,7 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 	float2 T = (T1 + T2 + T3) / 3.0f;
 	float4 Dir = float4((P2 - P1).xyz, 0.0f);	// Decide on direction
 	Dir = normalize(Dir);
-
+   
 	float3 lengthDir = noiseLength.SampleLevel(sampleType, T, 0).xyz;
 	float3 windDir = noiseWind.SampleLevel(sampleType, T * sin(time * windFreq/10), 0).xyz;
 	windDir = normalize(windDir);
@@ -75,7 +75,7 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 	lengthDir *= DirectionIntensity;
 	// Wind
 	windDir = (windDir * 2) - 1;
-	windDir *= sin(time * windFreq);
+	windDir *= cos(time * windFreq);
 	windDir = clamp(windDir, -windStrength, windStrength);
 	N = N + float4(lengthDir + windDir, 0.0f);
 	N = normalize(N);
@@ -92,8 +92,8 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 
 		float4 heightVector0 = float4(0, Length * t0, 0, 0) * Gravity * t0;
 		float4 p0 = normalize(N - heightVector0) * (Length * t0);
-		float4 heightVector2 = float4(0, Length * t1, 0, 0) * Gravity * t1;
-		float4 p1 = normalize(N - heightVector2) * (Length * t1);
+		float4 heightVector1 = float4(0, Length * t1, 0, 0) * Gravity * t1;
+		float4 p1 = normalize(N - heightVector1) * (Length * t1);
 
 		float widthBottom = (1 - t0) * Width;
 		float widthTop = (1 - t1) * Width;
@@ -120,10 +120,10 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 		OP4 = mul(OP4, projectionMatrix);
 
 		// Define output tex coords
-		float2 OTEX1 = float2(t0, t1);
-		float2 OTEX2 = float2(t0, t0);
-		float2 OTEX3 = float2(t1, t0);
-		float2 OTEX4 = float2(t1, t1);
+		float2 OTEX1 = float2(0, t1);
+		float2 OTEX2 = float2(0, t0);
+		float2 OTEX3 = float2(1, t0);
+		float2 OTEX4 = float2(1, t1);
 
 		// Construct 2 triangles(front quad)
 		// 1
@@ -144,23 +144,26 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 		triStream.RestartStrip();
 
 		// 2
-		output.position = OP1;
-		output.tex = OTEX1;
-		output.normal = N;
-		triStream.Append(output);
+        if(i != PARTS-1)
+        {
+        
+            output.position = OP1;
+            output.tex = OTEX1;
+            output.normal = N;
+            triStream.Append(output);
 
 
-		output.position = OP3;
-		output.tex = OTEX3;
-		output.normal = N;
-		triStream.Append(output);
+            output.position = OP3;
+            output.tex = OTEX3;
+            output.normal = N;
+            triStream.Append(output);
 
-		output.position = OP4;
-		output.tex = OTEX4;
-		output.normal = N;
-		triStream.Append(output);
-		triStream.RestartStrip();
-
+            output.position = OP4;
+            output.tex = OTEX4;
+            output.normal = N;
+            triStream.Append(output);
+            triStream.RestartStrip();
+        }
 		// Construct 2 triangles(back quad)
 		// 1
 		output.position = OP3;
@@ -180,54 +183,23 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 		triStream.RestartStrip();
 
 		// 2
-		output.position = OP4;
-		output.tex = OTEX4;
-		output.normal = N;
-		triStream.Append(output);
+        if (i != PARTS - 1)
+        {
+            output.position = OP4;
+            output.tex = OTEX4;
+            output.normal = N;
+            triStream.Append(output);
 
-		output.position = OP3;
-		output.tex = OTEX3;
-		output.normal = N;
-		triStream.Append(output);
+            output.position = OP3;
+            output.tex = OTEX3;
+            output.normal = N;
+            triStream.Append(output);
 
-		output.position = OP1;
-		output.tex = OTEX1;
-		output.normal = N;
-		triStream.Append(output);
-		triStream.RestartStrip();
-	}
-
-
-	/*
-	// Change the position vector to be 4 units for proper matrix calculations.
-	input[0].position.w = 1.0f;
-	// Move the vertex away from the point position
-	output.position = input[0].position + float4(0.0, 1.0, 0.0, 0.0);
-	output.position = mul(output.position, worldMatrix);
-	output.position = mul(output.position, viewMatrix);
-	output.position = mul(output.position, projectionMatrix);
-	output.tex = input[0].tex;
-	output.normal = mul(input[0].normal, (float3x3)worldMatrix);
-	output.normal = normalize(output.normal);
-	triStream.Append(output);
-
-	output.position = input[0].position + float4(-1.0, 0.0, 0.0, 0.0);
-	output.position = mul(output.position, worldMatrix);
-	output.position = mul(output.position, viewMatrix);
-	output.position = mul(output.position, projectionMatrix);
-	output.tex = input[0].tex;
-	output.normal = mul(input[0].normal, (float3x3)worldMatrix);
-	output.normal = normalize(output.normal);
-	triStream.Append(output);
-
-	output.position = input[0].position + float4(1.0, 0.0, 0.0, 0.0);
-	output.position = mul(output.position, worldMatrix);
-	output.position = mul(output.position, viewMatrix);
-	output.position = mul(output.position, projectionMatrix);
-	output.tex = input[0].tex;
-	output.normal = mul(input[0].normal, (float3x3)worldMatrix);
-	output.normal = normalize(output.normal);
-	triStream.Append(output);
-	triStream.RestartStrip();
-	*/
+            output.position = OP1;
+            output.tex = OTEX1;
+            output.normal = N;
+            triStream.Append(output);
+            triStream.RestartStrip();
+        }
+    }
 }

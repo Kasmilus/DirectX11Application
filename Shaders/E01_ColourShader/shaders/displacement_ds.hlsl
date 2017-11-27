@@ -40,7 +40,6 @@ struct InputType
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
-	float4 pos : TEXCOORD1;
 };
 
 struct OutputType
@@ -52,7 +51,7 @@ struct OutputType
 	float3 binormal : BINORMAL;
 	float3 viewDirection : TEXCOORD1;
 	float4 lightViewPosition : TEXCOORD2;
-	float3 lightPos : TEXCOORD3;
+	float3 pos : TEXCOORD3;
 };
 
 // Function declarations
@@ -73,20 +72,20 @@ OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, c
 	output.tangent = uvwCoord.x * patch[0].tangent + uvwCoord.y * patch[1].tangent + uvwCoord.z * patch[2].tangent;
 	output.binormal = uvwCoord.x * patch[0].binormal + uvwCoord.y * patch[1].binormal + uvwCoord.z * patch[2].binormal;
 
-	output.normal = normalize(output.normal);
-	output.tangent = normalize(output.tangent);
-	output.binormal = normalize(output.binormal);
+    output.normal = normalize(mul(output.normal, (float3x3) worldMatrix));
+    output.tangent = normalize(mul(output.tangent, (float3x3) worldMatrix));
+    output.binormal = normalize(mul(output.binormal, (float3x3) worldMatrix));
 
 	// --- DISPLACEMENT MAPPING --- //
 	float height = SampleDisplacementMap(output.tex, vertexPosition);
 	// Offset vertex along the normal
-	vertexPosition += float4((height - 1.0f) * output.normal, 0.0f);
+	vertexPosition += float4(height * output.normal, 0.0f);
 
 
 	// Calculate the position of the new vertex against the world, view, and projection matrices.
 	float4 worldPosition = mul(float4(vertexPosition, 1.0f), worldMatrix);
 	output.position = worldPosition;
-	output.viewDirection = normalize(cameraPosition - output.position);	// Set view direction
+    output.viewDirection = normalize(cameraPosition - output.position); // Set view direction
 	output.position = mul(output.position, viewMatrix);
 	output.position = mul(output.position, projectionMatrix);
 
@@ -95,8 +94,8 @@ OutputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, c
 	output.lightViewPosition = mul(output.lightViewPosition, lightViewMatrix);
 	output.lightViewPosition = mul(output.lightViewPosition, lightProjectionMatrix);
 
-	output.lightPos = normalize(lightPosition.xyz - worldPosition.xyz);
-	
+    output.pos = worldPosition;
+
 	CalculateNormals(output, vertexPosition);
 
     return output;
@@ -122,10 +121,14 @@ void CalculateNormals(inout OutputType output, in float3 vertexPosition)
 	float3 normal = Sobel(output.tex, vertexPosition);
 	// How much did normal changed?
 	float3 normalDelta = output.normal - normal;
-	// Set new normal, binormal and tangent vectors
-	//output.normal = normal;
-	//output.binormal = output.binormal + output.binormal * normalDelta;
-	//output.tangent = output.tangent + output.tangent * normalDelta;
+	// Set new normal vector
+    const float oldNormalStrength = 2.5f;
+    output.normal = output.normal + normal / oldNormalStrength;
+    output.normal = normalize(output.normal);
+    output.tangent = output.tangent + output.tangent * normalDelta / oldNormalStrength;
+    output.tangent = normalize(output.tangent);
+    output.binormal = output.binormal + output.binormal * normalDelta / oldNormalStrength;
+    output.binormal = normalize(output.binormal);
 }
 
 float3 Sobel(float2 texCoords, in float3 vertexPosition)
@@ -161,11 +164,11 @@ float3 Sobel(float2 texCoords, in float3 vertexPosition)
 	float h22 = SampleDisplacementMap(o22, vertexPosition);
 
 	// Evaluate Sobel filters
-	float Gx = h00 - h20 + 2.0f * h01 - 2.0f * h21 + h02 - h22;
-	float Gy = h00 + 2.0f * h10 + h20 - h02 - 2.0f * h12 - h22;
+	float x = h00 - h20 + 2.0f * h01 - 2.0f * h21 + h02 - h22;
+	float z = h00 + 2.0f * h10 + h20 - h02 - 2.0f * h12 - h22;
 
 	// Z
-	float Gz = 0.01f * sqrt(max(0.0f, 1.0f - Gx * Gx - Gy * Gy));
+	float y = 0.1f * sqrt(saturate(1.0f - x * x - z * z));
 
-	return normalize(float3(2.0f * Gx, Gz, 2.0f * Gy));
+	return normalize(float3(2.0f * x, y, 2.0f * z));
 }

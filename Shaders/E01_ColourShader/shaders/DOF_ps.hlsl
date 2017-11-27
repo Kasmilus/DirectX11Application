@@ -30,7 +30,6 @@ float4 main(InputType input) : SV_TARGET
 	sceneColour = sceneTexture.Sample(SampleType, input.tex);
 	blurColour = blurTexture.Sample(SampleType, input.tex);
 	depth = depthTexture.Sample(SampleType, input.tex).y;
-
 	// Calculate final blur
 	finalColour = lerp(sceneColour, blurColour, depth);
 

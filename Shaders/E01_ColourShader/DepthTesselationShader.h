@@ -33,7 +33,7 @@ public:
 	DepthTesselationShader(ID3D11Device* device, HWND hwnd);
 	~DepthTesselationShader();
 
-	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, float focalDistance, float focalRange, ID3D11ShaderResourceView* texture_displacement, XMFLOAT3 cameraPosition);
+	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, float focalDistance, float focalRange, ID3D11ShaderResourceView* texture_displacement, XMFLOAT3 cameraPosition, float minTessFactor, float maxTessFactor, float minTessDist, float maxTessDist);
 	void render(ID3D11DeviceContext* deviceContext, int indexCount);
 
 private:

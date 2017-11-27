@@ -12,6 +12,10 @@
 #include "DisplacementShader.h"
 #include "DepthTesselationShader.h"
 #include "GeometryShader.h"
+// Other
+#include "RenderTextureCubemap.h"
+#include <functional>
+
 
 class RenderObject
 {
@@ -27,13 +31,28 @@ public:
 	inline void SetScale(XMFLOAT3 newScale) { scale = newScale; }
 	inline void SetScale(float x, float y, float z) { SetScale(XMFLOAT3(x, y, z)); }
 
+	inline void SetShadowMapQuality(XMFLOAT2 lshadowMapSize, float ldirShadowMapQuality, float lpointShadowMapQuality) {
+		 shadowMapSize = lshadowMapSize;
+		 dirShadowMapQuality = ldirShadowMapQuality;
+		 pointShadowMapQuality = lpointShadowMapQuality;
+	}
+	inline void SetTesselationQuality(float lminTessFactor, float lmaxTessFactor, float lminTessDist, float lmaxTessDist){
+		 minTessFactor = lminTessFactor;
+		 maxTessFactor = lmaxTessFactor;
+		 minTessDist = lminTessDist;
+		 maxTessDist = lmaxTessDist;
+	}
+
 	// Get
 	inline XMFLOAT3 GetPosition() { return position; }
 
+	// Draw reflection cubemap
+	void UpdateReflectionCubemap(D3D* renderer, std::function<void(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)> renderScene);
+
 	// Render using given shader
 	void RenderSkybox(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture);
-	void RenderObjectShader(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap);
-	void RenderDisplacement(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, Light* light, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_displacement, ID3D11ShaderResourceView* texture_shadow);
+	void RenderObjectShader(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap = nullptr);
+	void RenderDisplacement(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_displacement, ID3D11ShaderResourceView* texture_envCubemap);
 	void RenderGrass(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_noise_length, ID3D11ShaderResourceView* texture_noise_wind, float currentTime, float windStrength, float windFreq);	// Geometry shader
 	void RenderTexture(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture);	// Colour shader
 	void RenderDepth(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, float focalDistance, float focalRange);
@@ -43,13 +62,14 @@ public:
 
 private:
 	void SetWorldMatrix(XMMATRIX& world);
-	
+
 private:
 	XMFLOAT3 position;
 	XMFLOAT3 rotation;
 	XMFLOAT3 scale;
 
 	BaseMesh* mesh;
+	RenderTextureCubemap* reflectionCubemap;
 
 	// Shaders
 	SkyboxShader* skyboxShader;
@@ -61,5 +81,18 @@ private:
 	DepthTesselationShader* depthTesselationShader;
 	BlurShader* blurShader;
 	DepthOfFieldShader* DOFShader;
+
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+
+	// Information passed to shaders
+	// Shadows
+	XMFLOAT2 shadowMapSize;
+	float dirShadowMapQuality;
+	float pointShadowMapQuality;
+	// Tesselation
+	float minTessFactor;
+	float maxTessFactor;
+	float minTessDist;
+	float maxTessDist;
 };
 
