@@ -39,19 +39,20 @@ public:
 
 protected:
 	bool render();
-	void renderSphereCubemap();
+	void renderReflectionCubemaps();
 	void renderShadowMaps();
 	void renderShadowMapScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection);
 	void renderDepthToTexture();
 	void renderSceneToTexture();
 	void renderPostProcessingToTexture();
-	void renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection);
+	void renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection, bool renderReflection);
 	void renderSceneWithPostProcessing();
 	void gui();
 	void ControlScene();
 
 	// Update dynamic object positions(camera, lights, skybox)
 	void UpdateObjects();
+	void UpdateShaderQualityParams();
 
 private:
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, orthoMatrix, orthoViewMatrix;
@@ -64,14 +65,16 @@ private:
 	RenderObject* dwarf;
 	RenderObject* sphere;
 	RenderObject* grass;
+	RenderObject* grassGround;
 	RenderObject* orthoMeshObj;
 
 	// Meshes
-	BaseMesh* skyboxMesh;	// Zmienic pozniej zeby nie renderowalo 2 stron skoro i tak tylko 1 widac bedzie
+	BaseMesh* skyboxMesh;
 	MyBaseMesh* floorMesh;
 	MyBaseMesh* sphereMesh;
 	MyBaseMesh* objectMesh;
 	BaseMesh* grassGeometryMesh;
+	BaseMesh* grassGroundPlane;	// just a simple black plane so the grass isn't floating in the air
 
 	MyLight* directionalLight;
 	std::vector<MyLight*> lights;
@@ -104,8 +107,6 @@ private:
 	// Depth of field focus variables
 	float focalDistance;
 	float focalRange;
-	float focalDistanceChangeSpeed;
-	float focalRangeChangeSpeed;
 
 	// Floor tessellation
 	float minTessFactor;
@@ -118,9 +119,11 @@ private:
 	float dirShadowMapQuality; // 0 - no shadow, 1 - hard shadow, 2 - soft shadow
 	float pointShadowMapQuality;
 
+	// Post processing
+	bool useDOF;
+	bool useBW;
+	bool useVignette;
 	bool postProcessingOn = false;
-	bool wasPKeyDownLastFrame = false;
-	bool wasIKeyDownLastFrame = false;
 
 };
 

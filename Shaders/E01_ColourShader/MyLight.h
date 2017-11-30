@@ -28,6 +28,7 @@ public:
 
 	void UpdateMatrices(float screenWidth, float screenHeight);
 	void UpdateShadowMap(D3D* renderer, std::function<void(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)> renderScene);
+	void ChangeShadowMapSize(D3D* renderer, XMFLOAT2 size);
 
 private:
 	bool isDirectional;

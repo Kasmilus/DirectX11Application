@@ -42,23 +42,28 @@ public:
 		 minTessDist = lminTessDist;
 		 maxTessDist = lmaxTessDist;
 	}
+	inline bool IsUsingDynamicReflections() { return dynamicReflection; }
+	inline void UseDynamicReflections(bool value) { dynamicReflection = value; }
+	inline void SetStaticReflectionsTexture(ID3D11ShaderResourceView* txt) { skybox = txt; }
 
 	// Get
 	inline XMFLOAT3 GetPosition() { return position; }
 
 	// Draw reflection cubemap
-	void UpdateReflectionCubemap(D3D* renderer, std::function<void(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)> renderScene);
+	void UpdateReflectionCubemap(D3D* renderer, std::function<void(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection, bool renderReflection)> renderScene);
 
 	// Render using given shader
 	void RenderSkybox(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture);
-	void RenderObjectShader(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap = nullptr);
+	void RenderObjectShader(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, bool renderReflections = true);
 	void RenderDisplacement(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_displacement, ID3D11ShaderResourceView* texture_envCubemap);
 	void RenderGrass(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_noise_length, ID3D11ShaderResourceView* texture_noise_wind, float currentTime, float windStrength, float windFreq);	// Geometry shader
 	void RenderTexture(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* texture);	// Colour shader
 	void RenderDepth(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, float focalDistance, float focalRange);
 	void RenderTesselationDepth(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, float focalDistance, float focalRange, ID3D11ShaderResourceView* texture_displacement, XMFLOAT3 cameraPosition);
 	void RenderBlur(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* sceneTextureFirstPass, ID3D11ShaderResourceView * sceneTextureSecondPass, ID3D11ShaderResourceView* depthTexture, float screenWidth, float screenHeight);
-	void RenderDepthOfField(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* sceneTexture, ID3D11ShaderResourceView* depthTexture, ID3D11ShaderResourceView* blurTexture, float screenResX, float screenResY);	// Blur based on depth map
+	void RenderDepthOfField(ID3D11DeviceContext* deviceContext, XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, ID3D11ShaderResourceView* sceneTexture, ID3D11ShaderResourceView* depthTexture, ID3D11ShaderResourceView* blurTexture, float screenResX, float screenResY, bool useDOF, bool useVignette, bool useBW);	// Blur based on depth map
+
+	bool dynamicReflection;
 
 private:
 	void SetWorldMatrix(XMMATRIX& world);
@@ -70,6 +75,7 @@ private:
 
 	BaseMesh* mesh;
 	RenderTextureCubemap* reflectionCubemap;
+	ID3D11ShaderResourceView* skybox;	// For static reflections
 
 	// Shaders
 	SkyboxShader* skyboxShader;
@@ -81,6 +87,7 @@ private:
 	DepthTesselationShader* depthTesselationShader;
 	BlurShader* blurShader;
 	DepthOfFieldShader* DOFShader;
+
 
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
 

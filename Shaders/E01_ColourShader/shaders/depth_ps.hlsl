@@ -22,13 +22,15 @@ float4 main(InputType input) : SV_TARGET
 {
 	
 	// Get depth of the pixel, subtract from 1 for better precision on long distances
-	float depth = 1 - (input.depthPosition.z / input.depthPosition.w);
+    float depth = 1 - (input.depthPosition.z / input.depthPosition.w);
+    float depthInv = (input.depthPosition.z / input.depthPosition.w);
+    depth = saturate(depth);
 	// Logarythmic z-buffer
     //depth = 1 - (log(1 * input.depthPosition.z + 1) / log(1 * input.depthPosition.w + 1) * input.depthPosition.z * 0.1f);
 
 	// Write grayscale image, the brighter the closer to the camera
 	float DOF = saturate(abs(-depth*100 + focalDistance) / focalRange);
-    float4 colour = float4(depth, DOF, depth, 1.0f);
+    float4 colour = float4(depth, DOF, depthInv, 1.0f);
 
 	return colour;
 }

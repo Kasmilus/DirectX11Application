@@ -99,3 +99,9 @@ void MyLight::UpdateShadowMap(D3D* renderer, std::function<void(XMMATRIX &world,
 
 
 }
+
+void MyLight::ChangeShadowMapSize(D3D* renderer, XMFLOAT2 size)
+{
+	delete shadowMap;
+	shadowMap = new RenderTexture(renderer->getDevice(), size.x, size.y, SCREEN_NEAR, SCREEN_DEPTH);
+}

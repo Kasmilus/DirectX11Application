@@ -27,7 +27,7 @@ RenderObject::~RenderObject()
 {
 }
 
-void RenderObject::UpdateReflectionCubemap(D3D * renderer, std::function<void(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)> renderScene)
+void RenderObject::UpdateReflectionCubemap(D3D * renderer, std::function<void(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection, bool renderReflection)> renderScene)
 {
 	if (reflectionCubemap == nullptr)
 	{
@@ -60,7 +60,7 @@ void RenderObject::UpdateReflectionCubemap(D3D * renderer, std::function<void(XM
 		XMFLOAT3(0, 1, 0),
 		XMFLOAT3(0, 1, 0),
 	};
-	
+
 	for (int i = 0; i < 6; ++i)
 	{
 		// Define look and up vectors for that face of the cubemap 
@@ -72,7 +72,7 @@ void RenderObject::UpdateReflectionCubemap(D3D * renderer, std::function<void(XM
 		reflectionCubemap->setRenderTarget(renderer->getDeviceContext(), i);
 		reflectionCubemap->clearRenderTarget(renderer->getDeviceContext(), i, 0.0f, 0.0f, 1.0f, 1.0f);
 
-		renderScene(worldMatrix, viewMatrix, projectionMatrix);
+		renderScene(worldMatrix, viewMatrix, projectionMatrix, false);
 	}
 }
 
@@ -85,19 +85,15 @@ void RenderObject::RenderSkybox(ID3D11DeviceContext * deviceContext, XMMATRIX & 
 	skyboxShader->render(deviceContext, mesh->getIndexCount());
 }
 
-void RenderObject::RenderObjectShader(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, ID3D11ShaderResourceView* texture_envCubemap)
+void RenderObject::RenderObjectShader(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, bool renderReflections)
 {
-	if (texture_envCubemap == nullptr)
+	ID3D11ShaderResourceView* texture_envCubemap = skybox;
+
+	if (dynamicReflection && renderReflections)
 	{
-		if (reflectionCubemap)
-		{
-			texture_envCubemap = reflectionCubemap->getShaderResourceView();
-		}
-		else
-		{
-			return;	// didn't pass reflection map to the shader and it wasn't generated yet - don't render(should print out some error, add later)
-		}
+		texture_envCubemap = reflectionCubemap->getShaderResourceView();
 	}
+
 
 	SetWorldMatrix(world);
 
@@ -167,12 +163,12 @@ void RenderObject::RenderBlur(ID3D11DeviceContext * deviceContext, XMMATRIX & wo
 	blurShader->render(deviceContext, mesh->getIndexCount());
 }
 
-void RenderObject::RenderDepthOfField(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, ID3D11ShaderResourceView * sceneTexture, ID3D11ShaderResourceView * depthTexture, ID3D11ShaderResourceView * blurTexture, float screenResX, float screenResY)
+void RenderObject::RenderDepthOfField(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, ID3D11ShaderResourceView * sceneTexture, ID3D11ShaderResourceView * depthTexture, ID3D11ShaderResourceView * blurTexture, float screenResX, float screenResY, bool useDOF, bool useVignette, bool useBW)
 {
 	SetWorldMatrix(world);
 
 	mesh->sendData(deviceContext);
-	DOFShader->setShaderParameters(deviceContext, world, view, projection, sceneTexture, depthTexture, blurTexture, screenResX, screenResY);
+	DOFShader->setShaderParameters(deviceContext, world, view, projection, sceneTexture, depthTexture, blurTexture, screenResX, screenResY, useDOF, useVignette, useBW);
 	DOFShader->render(deviceContext, mesh->getIndexCount());
 }
 

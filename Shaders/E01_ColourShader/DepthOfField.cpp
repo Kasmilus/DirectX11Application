@@ -69,7 +69,7 @@ void DepthOfFieldShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 }
 
 
-void DepthOfFieldShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* sceneTexture, ID3D11ShaderResourceView* depthTexture, ID3D11ShaderResourceView* blurTexture, float screenResX, float screenResY)
+void DepthOfFieldShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, ID3D11ShaderResourceView* sceneTexture, ID3D11ShaderResourceView* depthTexture, ID3D11ShaderResourceView* blurTexture, float screenResX, float screenResY, bool useDOF, bool useVignette, bool useBW)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -109,6 +109,19 @@ void DepthOfFieldShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 	screenRes.x = screenResX;
 	screenRes.y = screenResY;
 	screenSizeDataPtr->screenResolution = screenRes;
+	if (useDOF)
+		screenSizeDataPtr->UseDOF = 1;
+	else
+		screenSizeDataPtr->UseDOF = 0;
+	if (useBW && useVignette)
+		screenSizeDataPtr->effects = 2;
+	else if (useVignette)
+		screenSizeDataPtr->effects = 0;
+	else if (useBW)
+		screenSizeDataPtr->effects = 1;
+	else 
+		screenSizeDataPtr->effects = 3;
+
 	deviceContext->Unmap(screenSizeBuffer, 0);
 	deviceContext->PSSetConstantBuffers(0, 1, &screenSizeBuffer);
 

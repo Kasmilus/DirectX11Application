@@ -24,8 +24,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	// Default values for controlling shaders
 	currentTime = 0;
 	// Wind
-	windStrength = 0.45f;
-	windFreq = 0.2f;
+	windStrength = 0.65f;
+	windFreq = 0.7f;
 	// Tessellation
 	minTessFactor = 1;
 	maxTessFactor = 4;
@@ -34,8 +34,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	// Depth of field
 	focalDistance = 0.77f;
 	focalRange = 0.55f;
-	focalDistanceChangeSpeed = 0.5f;
-	focalRangeChangeSpeed = 2.0f;
+
 	// Shadow maps quality
 	shadowMapSize = XMFLOAT2(1024, 1024);
 	dirShadowMapQuality = 2;
@@ -58,6 +57,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	textureMgr->loadTexture("grass_noise_wind", L"../res/noise2.png");
 
 	textureMgr->loadTexture("skybox", L"../res/skybox.dds");
+	textureMgr->loadTexture("black", L"../res/black.png");
 
 	// MESHES
 	skyboxMesh = new SkyboxMesh(renderer->getDevice(), renderer->getDeviceContext());
@@ -65,6 +65,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	objectMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/dwarf.obj");
 	sphereMesh = new MyModelMesh(renderer->getDevice(), renderer->getDeviceContext(), "../res/sphere.obj");
 	grassGeometryMesh = new PlaneMesh(renderer->getDevice(), renderer->getDeviceContext(), 50);
+	grassGroundPlane = new QuadMesh(renderer->getDevice(), renderer->getDeviceContext());
 
 	// SHADERS
 	skyboxShader = new SkyboxShader(renderer->getDevice(), hwnd);
@@ -79,6 +80,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	directionalLight->setPosition(-20.0f, 20, -5.0f);
 	directionalLight->setDirection(0.7f, -0.25f, 0.4f);
 	directionalLight->SetDirectional(true);
+	directionalLight->SetIsActive(true);
 
 	MyLight* light = new MyLight(renderer);
 	light->setDiffuseColour(2.0f, 0.0f, 0.0f, 1.0f);
@@ -86,7 +88,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	light->SetRadius(8);
 	light->SetAttenuation(1, 0.5f, 0.75f);
 	light->SetDirectional(false);
-	light->SetIsActive(false);
+	light->SetIsActive(true);
 	lights.push_back(light);
 	MyLight* light2 = new MyLight(renderer);
 	light2->setDiffuseColour(0.0f, 5.0f, 0.0f, 1.0f);
@@ -132,25 +134,33 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	depthTesselationShader = new DepthTesselationShader(renderer->getDevice(), hwnd);
 
 	// Render objects
+	// Skybox
 	skybox = new RenderObject(skyboxMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+	// Floor
 	floor = new RenderObject(floorMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 	floor->SetPosition(-15, -5, -10);
 	floor->SetScale(1.2f, 0.25f, 1.2f);
-	//floor->SetPosition(-1, -5, -10);
-	//floor->SetScale(0.1f, 0.1f, 0.1f);
+	// Dwarf
 	dwarf = new RenderObject(objectMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+	dwarf->SetStaticReflectionsTexture(textureMgr->getTexture("skybox"));
+	dwarf->UseDynamicReflections(false);
+	// Sphere
 	sphere = new RenderObject(sphereMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 	sphere->SetPosition(-5, 0, 0);
+	sphere->SetStaticReflectionsTexture(textureMgr->getTexture("skybox"));
+	sphere->UseDynamicReflections(true);
+	// Grass
 	grass = new RenderObject(grassGeometryMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
-	grass->SetPosition(-25.5f, -5.2f, 14.0f);
+	grass->SetPosition(-30.0f, -5.2f, 0);
 	grass->SetScale(0.3f, 0.3f, 0.3f);
+	grassGround = new RenderObject(grassGeometryMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
+	grassGround->SetPosition(-30.0f, -5.2f, 0);
+	grassGround->SetScale(0.3f, 0.3f, 0.3f);
+	// Ortho mesh
 	orthoMeshObj = new RenderObject(orthoMesh, skyboxShader, objectShader, displacementShader, grassGeometryShader, colourShader, depthShader, depthTesselationShader, blurShader, DOFShader);
 
 	// Set defualt shader params for objects
-	floor->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
-	dwarf->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
-	sphere->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
-	floor->SetTesselationQuality(minTessFactor, maxTessFactor, minTessDist, maxTessDist);
+	UpdateShaderQualityParams();
 }
 
 
@@ -279,7 +289,7 @@ bool App1::render()
 	if (renderer->getWireframeState())
 	{
 		renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
-		renderScene(worldMatrix, viewMatrix, projectionMatrix);
+		renderScene(worldMatrix, viewMatrix, projectionMatrix, false);
 	}
 	else
 	{
@@ -314,7 +324,7 @@ void App1::renderShadowMaps()
 	{
 		light->UpdateShadowMap(renderer, std::bind(&App1::renderShadowMapScene, this, _1, _2, _3));
 	}
-	
+
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
 	renderer->setBackBufferRenderTarget();
 }
@@ -340,11 +350,24 @@ void App1::renderDepthToTexture()
 	renderer->setBackBufferRenderTarget();
 }
 
-void App1::renderSphereCubemap()
+void App1::renderReflectionCubemaps()
 {
 	// Render reflection cubemap(pass function pointer)
-	skybox->SetPosition(sphere->GetPosition());
-	sphere->UpdateReflectionCubemap(renderer, std::bind(&App1::renderScene, this, _1, _2, _3));
+	// Sphere
+	if (sphere->IsUsingDynamicReflections())
+	{
+		skybox->SetPosition(sphere->GetPosition());
+		sphere->UpdateReflectionCubemap(renderer, std::bind(&App1::renderScene, this, _1, _2, _3, _4));
+	}
+
+	// Dwarf
+	if (dwarf->IsUsingDynamicReflections())
+	{
+		skybox->SetPosition(dwarf->GetPosition());
+		dwarf->UpdateReflectionCubemap(renderer, std::bind(&App1::renderScene, this, _1, _2, _3, _4));
+	}
+
+	// Move camera back
 	skybox->SetPosition(camera->getPosition());
 
 	renderer->setBackBufferRenderTarget();
@@ -353,27 +376,28 @@ void App1::renderSphereCubemap()
 void App1::renderSceneToTexture()
 {
 	// Render reflection maps
-	renderSphereCubemap();
+	renderReflectionCubemaps();
 
 	// Render the scene
 	sceneTextureCurrent->setRenderTarget(renderer->getDeviceContext());
 	sceneTextureCurrent->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
 
-	renderScene(worldMatrix, viewMatrix, projectionMatrix);
+	renderScene(worldMatrix, viewMatrix, projectionMatrix, true);
 
 	renderer->setBackBufferRenderTarget();
 }
 // Render objects without any post-processing effects
-void App1::renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection)
+void App1::renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection, bool renderReflection)
 {
 	// Render dwarf
-	dwarf->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), textureMgr->getTexture("skybox"));
+	dwarf->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), renderReflection);
 	// Render sphere
-	sphere->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"));
+	sphere->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), renderReflection);
 	// Render floor
 	floor->RenderDisplacement(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), textureMgr->getTexture("skybox"));
 	// Render grass
 	grass->RenderGrass(renderer->getDeviceContext(), world, view, projection, textureMgr->getTexture("grass_base"), textureMgr->getTexture("grass_noise_length"), textureMgr->getTexture("grass_noise_wind"), currentTime, windStrength, windFreq);
+	grassGround->RenderTexture(renderer->getDeviceContext(), world, view, projection, textureMgr->getTexture("black"));
 	// Render skybox
 	skybox->RenderSkybox(renderer->getDeviceContext(), world, view, projection, textureMgr->getTexture("skybox"));
 }
@@ -395,7 +419,7 @@ void App1::renderPostProcessingToTexture()
 	// Depth of field
 	DOFTexture->setRenderTarget(renderer->getDeviceContext());
 	DOFTexture->clearRenderTarget(renderer->getDeviceContext(), 0.0f, 0.0f, 1.0f, 1.0f);
-	orthoMeshObj->RenderDepthOfField(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), depthTexture->getShaderResourceView(), blurTextureUpSampled->getShaderResourceView(), screenWidth, screenHeight);
+	orthoMeshObj->RenderDepthOfField(renderer->getDeviceContext(), worldMatrix, orthoViewMatrix, orthoMatrix, sceneTextureCurrent->getShaderResourceView(), depthTexture->getShaderResourceView(), blurTextureUpSampled->getShaderResourceView(), screenWidth, screenHeight, useDOF, useVignette, useBW);
 
 	renderer->setBackBufferRenderTarget();
 }
@@ -433,18 +457,117 @@ void App1::gui()
 
 	// Build UI
 	ImGui::Text("FPS: %.2f\n", timer->getFPS());
-	ImGui::Text("Toggle wire frame mode: I\n");
-	ImGui::Text("Lighting: \n");
-	ImGui::Text("	Move point light: <-Z X->\n");
-	ImGui::Text("Toggle post-processing effects: P\n");
+	if (ImGui::Button("Toggle wire frame mode"))
+	{
+		renderer->setWireframeMode(!renderer->getWireframeState());
+	}
+	// Controls
+	ImGui::Text("Keyboard controls: \n");
+	ImGui::BulletText("	Move camera: WSAD\n");
+	ImGui::BulletText("	Move sphere: TGFH\n");
+	ImGui::BulletText("	Move point light: IKJL\n");
+	// Dynamic reflections
+	ImGui::Text("Dynamic reflections:");
+	ImGui::Checkbox("Dwarf", &dwarf->dynamicReflection);
+	ImGui::SameLine();
+	ImGui::Checkbox("Sphere", &sphere->dynamicReflection);
+	// Tesselation
+	ImGui::Text("Floor tessellation:");
+	ImGui::SliderFloat("Min distance", &minTessDist, 20.0f, 100.0f, "%.1f");
+	ImGui::SliderFloat("Max distance", &maxTessDist, 1.0f, 20.0f, "%.1f");
+	ImGui::SliderFloat("Min factor", &minTessFactor, 1.0f, 4.0f, "%.1f");
+	ImGui::SliderFloat("Max factor", &maxTessFactor, 4.0f, 8.0f, "%.1f");
+	// Shadows quality
+	ImGui::Text("Shadow maps:");
+	ImGui::Text("Size:");
+	if (ImGui::Button("256x256"))
+	{
+		shadowMapSize = XMFLOAT2(256, 256);
+		directionalLight->ChangeShadowMapSize(renderer, shadowMapSize);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("512x512"))
+	{
+		shadowMapSize = XMFLOAT2(512, 512);
+		directionalLight->ChangeShadowMapSize(renderer, shadowMapSize);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("1024x1024"))
+	{
+		shadowMapSize = XMFLOAT2(1024, 1024);
+
+		directionalLight->ChangeShadowMapSize(renderer, shadowMapSize);
+	}
+	ImGui::Text("Directional light shadows quality:");
+	if (ImGui::Button("None"))
+		dirShadowMapQuality = 0;
+	ImGui::SameLine();
+	if (ImGui::Button("Hard"))
+		dirShadowMapQuality = 1;
+	ImGui::SameLine();
+	if (ImGui::Button("Soft"))
+		dirShadowMapQuality = 2;
+	ImGui::Text("Point light shadows quality:");
+	if (ImGui::Button("None##None1"))
+		pointShadowMapQuality = 0;
+	ImGui::SameLine();
+	if (ImGui::Button("Hard##Hard1"))
+		pointShadowMapQuality = 1;
+	ImGui::SameLine();
+	if (ImGui::Button("Soft##Soft1"))
+		pointShadowMapQuality = 2;
+	// Wind
+	ImGui::Text("Grass wind:");
+	ImGui::SliderFloat("Frequency", &windFreq, 0.1f, 1.5f, "%.2f");
+	ImGui::SliderFloat("Strength", &windStrength, 0.1f, 1.0f, "%.2f");
+	// Post processing
+	if (ImGui::Button("Toggle post-processing effects"))
+	{
+		postProcessingOn = !postProcessingOn;
+	}
 	if (postProcessingOn)
 	{
-		ImGui::Text("Depth of field:\n");
-		ImGui::Text("	Change focal distance: <-K L->\n");
-		ImGui::Text("	Focal distance: %.2f\n", focalDistance);
-		ImGui::Text("	Change focal range: <-N M->\n");
-		ImGui::Text("	Focal range: %.2f\n", focalRange);
+		ImGui::Checkbox("Black and White", &useBW);
+		ImGui::Checkbox("Vignette", &useVignette);
+		ImGui::Checkbox("Depth of field", &useDOF);
+		ImGui::SliderFloat("Change focal distance", &focalDistance, -0.99f, 2.0f, "%.2f");
+		ImGui::SliderFloat("Change focal range", &focalRange, 0.55f, 6.0f, "%.2f");
 	}
+	// Lights
+	// Dir light
+	ImVec4 col = ImVec4(directionalLight->getDiffuseColour().x, directionalLight->getDiffuseColour().y, directionalLight->getDiffuseColour().z, 1);
+	bool isActive = directionalLight->IsActive();
+	ImGui::Text("Directional light");
+	ImGui::SameLine();
+	ImGui::Checkbox("", &isActive);
+	ImGui::ColorEdit3("Colour", (float*)&col);
+	directionalLight->setDiffuseColour(col.x, col.y, col.z, 1.0f);
+	if(!isActive)
+		directionalLight->setDiffuseColour(0, 0, 0, 1.0f);
+	directionalLight->SetIsActive(isActive);
+	// point lights
+	for (int i = 0; i < 4; ++i)
+	{
+		MyLight* l = lights.at(i);
+		float radius = l->GetRadius();
+		ImVec4 col = ImVec4(l->getDiffuseColour().x, l->getDiffuseColour().y, l->getDiffuseColour().z, 1);
+		bool isActive = l->IsActive();
+		float atten[3] = { l->GetAttenuation().x, l->GetAttenuation().y, l->GetAttenuation().z };
+		ImGui::PushID(i);
+		ImGui::Text("Point light %d", (i + 1));
+		ImGui::SameLine();
+		ImGui::Checkbox("", &isActive);
+		ImGui::ColorEdit3("Colour", (float*)&col);
+		ImGui::SliderFloat("Radius", &radius, 4.0f, 15.0f);
+		ImGui::InputFloat3("Attenuation", atten);
+		ImGui::PopID();
+		l->setDiffuseColour(col.x, col.y, col.z, 1.0f);
+		l->SetRadius(radius);
+		l->SetAttenuation(atten[0], atten[1], atten[2]);
+		l->SetIsActive(isActive);
+	}
+
+	UpdateShaderQualityParams();
 
 	// Render UI
 	ImGui::Render();
@@ -505,53 +628,6 @@ void App1::ControlScene()
 	{
 		sphere->SetPosition(sphere->GetPosition().x, sphere->GetPosition().y, sphere->GetPosition().z + sphereSpeed);
 	}
-
-	// Post processing controls
-	if (postProcessingOn)
-	{
-		float d = focalDistanceChangeSpeed * timer->getTime();
-		if (input->isKeyDown('L'))
-		{
-			focalDistance += d;
-
-			if (focalDistance > 2.0f)
-				focalDistance = 2.0f;
-		}
-		if (input->isKeyDown('K'))
-		{
-			focalDistance -= d;
-
-			if (focalDistance < -0.99f)
-				focalDistance = -0.99f;
-		}
-		d = focalRangeChangeSpeed * timer->getTime();
-		if (input->isKeyDown('M'))
-		{
-			focalRange += d;
-
-			if (focalRange > 6)
-				focalRange = 6;
-		}
-		if (input->isKeyDown('N'))
-		{
-			focalRange -= d;
-			if (focalRange < 0.55f)
-				focalRange = 0.55f;
-		}
-	}
-	// Toggle post processing
-	if (input->isKeyDown('P') && !wasPKeyDownLastFrame)
-	{
-		postProcessingOn = !postProcessingOn;
-	}
-	wasPKeyDownLastFrame = input->isKeyDown('P');
-
-	// Toggle wire frame mode
-	if (input->isKeyDown('M') && !wasIKeyDownLastFrame)
-	{
-		renderer->setWireframeMode(!renderer->getWireframeState());
-	}
-	wasIKeyDownLastFrame = input->isKeyDown('M');
 }
 
 void App1::UpdateObjects()
@@ -563,5 +639,13 @@ void App1::UpdateObjects()
 	{
 		light->UpdateMatrices(screenWidth, screenHeight);
 	}
+}
+
+void App1::UpdateShaderQualityParams()
+{
+	floor->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
+	dwarf->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
+	sphere->SetShadowMapQuality(shadowMapSize, dirShadowMapQuality, pointShadowMapQuality);
+	floor->SetTesselationQuality(minTessFactor, maxTessFactor, minTessDist, maxTessDist);
 }
 

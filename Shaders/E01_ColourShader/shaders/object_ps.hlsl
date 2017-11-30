@@ -206,7 +206,7 @@ float PercentageCloseFilter(float2 uv, float2 offset, float lightDepthValue, Tex
 
 float CalculateShadow(float4 lightViewPosition, Texture2D shadowMap)
 {
-    const float BIAS = 0.1f;
+    const float BIAS = 0.0f;
     float3 projectTexCoord;
     float2 uv;
     float depthValue;
@@ -236,7 +236,8 @@ float CalculateShadow(float4 lightViewPosition, Texture2D shadowMap)
 
     if (directionalShadowMapQuality == 1)
     {
-        return shadowMap.SampleCmpLevelZero(SampleTypeComparison, uv, lightDepthValue);
+        // Something is wrong here, I can compare -999999 or 99999 instead of lightDepthValue and it doesn't make any difference
+        return shadowMap.SampleCmp(SampleTypeComparison, uv, lightDepthValue);
     }
     else
     {
@@ -262,7 +263,8 @@ float PercentageCloseFilterCubemap(float3 uvz, float3 offset, float lightDepthVa
             for (int z = -PCF_STEP; z <= PCF_STEP; z++)
             {
                 float3 offsetUVZ = uvz + float3(x, y, z) * offset;
-                sum += shadowCubemap.SampleCmpLevelZero(SampleTypeComparison, offsetUVZ, lightDepthValue);
+                if (shadowCubemap.SampleLevel(SampleTypeCubemap, offsetUVZ, 0).z >= lightDepthValue)
+                    sum += 1;
             }
         }
     }
@@ -284,7 +286,7 @@ float ConvertDistToClipSpace(float3 lightDir_ws)
 
 float CalculateShadowCubemap(float3 lightDir, float lightDist, TextureCube shadowCubemap)
 {
-    const float BIAS = 0.01f;
+    const float BIAS = 0.005f;
     float lightDepthValue;
    
     if (pointShadowMapQuality == 0)
@@ -298,13 +300,17 @@ float CalculateShadowCubemap(float3 lightDir, float lightDist, TextureCube shado
 
     if (pointShadowMapQuality == 1)
     {
-        return shadowCubemap.SampleCmpLevelZero(SampleTypeComparison, lightDir, lightDepthValue);
+        if (shadowCubemap.Sample(SampleTypeCubemap, lightDir).z >= lightDepthValue)
+            return 1;
+        else
+            return 0;
+
     }
     else
     {
         float offset = float2(1.0 / shadowMapSize.x, 1.0 / shadowMapSize.y);
         // Change offset based on distance
-        offset *= pow(1 + lightDepthValue, 2);
+        offset *= pow(8 + lightDepthValue, 2);
 
         return PercentageCloseFilterCubemap(lightDir, offset, lightDepthValue, shadowCubemap);
     }
