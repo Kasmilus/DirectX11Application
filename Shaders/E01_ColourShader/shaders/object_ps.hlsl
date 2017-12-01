@@ -57,6 +57,8 @@ cbuffer MaterialBuffer : register(cb2)
     float4 materialColour;
     float materialRoughness;
     float materialMetallic;
+    float distributionFunction; // 0 - GGX, 1 - Beckmann
+    float geometryFunction; // 0 - GGX, 1 - Cook-Torrance
 };
 
 // Input
@@ -146,7 +148,9 @@ float3 CookTorrance(float3 materialDiffuseColor,
 {
 	// indices of refraction between air and shader object
     float ior = 0.1f;
-    const float k = 0.1f; // error correction - isn't in formula but I added it to get rid of some problems appearing at low angles
+    float k = 0.1f; // error correction - isn't in formula but I added it to get rid of some problems appearing at low angles
+    if (distributionFunction == 1)
+        k = 0;
     materialDiffuseColor += materialColour;
     materialDiffuseColor = saturate(materialDiffuseColor);
     roughness += materialRoughness;
@@ -160,8 +164,8 @@ float3 CookTorrance(float3 materialDiffuseColor,
         float3 halfVector = normalize(lightDir + viewDir);
         float halfVectorAngle = saturate(dot(normal, halfVector));
         float viewDirAngle = saturate(dot(normal, viewDir));
-		//float lightHalfVectorAngle = saturate(dot(lightDir, halfVector)); // Used in Cook-Torrance geometry function
-		//float lightVectorAngle = saturate(dot(normal, lightDir));	// Used in Cook-Torrance geometry function
+		float lightHalfVectorAngle = saturate(dot(lightDir, halfVector)); // Used in Cook-Torrance geometry function
+		float lightVectorAngle = saturate(dot(normal, lightDir));	// Used in Cook-Torrance geometry function
 
 		// Calculate reflectance
         float3 F0 = abs((1.0 - ior) / (1.0 + ior)); // Actual formula to calculate that is ( (n1 - n2) / (n1 + n2) )^2 but here we use approximation
@@ -170,12 +174,18 @@ float3 CookTorrance(float3 materialDiffuseColor,
         float3 F = Fresnel(halfVectorAngle, F0);
 
 		// Microfacet distribution
-		//float D = BeckmannDistribution(halfVectorAngle, roughness);
-        float D = GGXDistribution(halfVectorAngle, roughness);
+        float D;
+        if(distributionFunction == 1)
+		    D = BeckmannDistribution(halfVectorAngle, roughness);
+        else
+            D = GGXDistribution(halfVectorAngle, roughness);
 
 		// Geometry function
-		//float G = CookTorranceGeometry(halfVectorAngle, lightVectorAngle, lightHalfVectorAngle);
-        float G = GGX_PartialGeometryTerm(viewDir, normal, halfVector, roughness);
+        float G;
+        if(geometryFunction == 1)
+		    G = CookTorranceGeometry(halfVectorAngle, lightVectorAngle, lightHalfVectorAngle);
+        else
+            G = GGX_PartialGeometryTerm(viewDir, normal, halfVector, roughness);
 
 		// Finally put it all together
         Ks = (D * F * G) / (PI * lightDirAngle * clamp(viewDirAngle, k, 1 - k));

@@ -136,7 +136,7 @@ void ObjectShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 }
 
 
-void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality, XMFLOAT3 mCol, float mMetallic, float mRoughness)
+void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality, XMFLOAT3 mCol, float mMetallic, float mRoughness, bool useGGXDistribution, bool useGGXGeometry)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -232,6 +232,8 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 	materialDataPtr->materialColour = XMFLOAT4(mCol.x, mCol.y, mCol.z, 1.0f);
 	materialDataPtr->materialMetallic = mMetallic;
 	materialDataPtr->materialRoughness = mRoughness;
+	materialDataPtr->distributionFunction = useGGXDistribution == true ? 0 : 1;
+	materialDataPtr->geometryFunction = useGGXGeometry == true ? 0 : 1;
 	deviceContext->Unmap(materialBuffer, 0);
 	deviceContext->PSSetConstantBuffers(2, 1, &materialBuffer);
 

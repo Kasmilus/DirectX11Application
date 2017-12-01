@@ -43,6 +43,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	mCol = XMFLOAT3(0, 0, 0);
 	mRoughness = 0;
 	mMetallic = 0;
+	ggxDistribution = true;
+	ggxGeometry = true;
 
 	// TEXTURES
 	textureMgr->loadTexture("object_base", L"../res/PBR/RustedIron/rustediron-streaks_basecolor.png");
@@ -394,9 +396,9 @@ void App1::renderSceneToTexture()
 void App1::renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection, bool renderReflection)
 {
 	// Render dwarf
-	dwarf->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), mCol, mMetallic, mRoughness, renderReflection);
+	dwarf->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), mCol, mMetallic, mRoughness, ggxDistribution, ggxGeometry, renderReflection);
 	// Render sphere
-	sphere->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), mCol, mMetallic, mRoughness, renderReflection);
+	sphere->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), mCol, mMetallic, mRoughness, ggxDistribution, ggxGeometry, renderReflection);
 	// Render floor
 	floor->RenderDisplacement(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), textureMgr->getTexture("skybox"));
 	// Render grass
@@ -491,6 +493,22 @@ void App1::gui()
 	mCol = XMFLOAT3(c[0], c[1], c[2]);
 	ImGui::SliderFloat("Roughness", &mRoughness, -1.0f, 1.0f);
 	ImGui::SliderFloat("Metallic", &mMetallic, -1.0f, 1.0f);
+	ImGui::Text("Cook-Torrance term");
+	ImGui::Text("Distribution function:");
+	ImGui::SameLine();
+	ImGui::Checkbox("GGX", &ggxDistribution);
+	ImGui::SameLine();
+	bool beckamnnDistribution = !ggxDistribution;
+	ImGui::Checkbox("Beckmann", &beckamnnDistribution);
+	ggxDistribution = !beckamnnDistribution;
+	ImGui::Text("Geometry function:");
+	ImGui::SameLine();
+	ImGui::Checkbox("GGX###ggx2", &ggxGeometry);
+	ImGui::SameLine();
+	bool ctGeometry = !ggxGeometry;
+	ImGui::Checkbox("Cook-Torrance", &ctGeometry);
+	ggxGeometry = !ctGeometry;
+
 	// Tesselation
 	ImGui::NewLine();
 	ImGui::Separator();
@@ -581,6 +599,8 @@ void App1::gui()
 	if(!isActive)
 		directionalLight->setDiffuseColour(0, 0, 0, 1.0f);
 	directionalLight->SetIsActive(isActive);
+	ImGui::NewLine();
+
 	// point lights
 	for (int i = 0; i < 4; ++i)
 	{
@@ -601,6 +621,8 @@ void App1::gui()
 		l->SetRadius(radius);
 		l->SetAttenuation(atten[0], atten[1], atten[2]);
 		l->SetIsActive(isActive);
+		ImGui::NewLine();
+
 	}
 	ImGui::NewLine();
 	ImGui::Separator();

@@ -129,6 +129,8 @@ private:
 	XMFLOAT3 mCol;
 	float mMetallic;
 	float mRoughness;
+	bool ggxDistribution;
+	bool ggxGeometry;
 
 
 };

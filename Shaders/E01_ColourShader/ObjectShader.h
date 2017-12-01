@@ -53,14 +53,15 @@ public:
 		XMFLOAT4 materialColour;
 		float materialRoughness;
 		float materialMetallic;
-		XMFLOAT2 padding;
+		float distributionFunction;	// 0 - GGX, 1 - Beckmann
+		float geometryFunction;	// 0 - GGX, 1 - Cook-Torrance
 	};
 
 	ObjectShader(ID3D11Device* device, HWND hwnd);
 	~ObjectShader();
 
 
-	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality, XMFLOAT3 mCol, float mMetallic, float mRoughness);
+	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality, XMFLOAT3 mCol, float mMetallic, float mRoughness, bool useGGXDistribution, bool useGGXGeometry);
 	void render(ID3D11DeviceContext* deviceContext, int vertexCount);
 
 private:

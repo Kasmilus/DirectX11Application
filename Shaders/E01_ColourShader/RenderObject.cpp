@@ -85,7 +85,7 @@ void RenderObject::RenderSkybox(ID3D11DeviceContext * deviceContext, XMMATRIX & 
 	skyboxShader->render(deviceContext, mesh->getIndexCount());
 }
 
-void RenderObject::RenderObjectShader(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, XMFLOAT3 mCol, float mMetallic, float mRoughness, bool renderReflections)
+void RenderObject::RenderObjectShader(ID3D11DeviceContext * deviceContext, XMMATRIX & world, const XMMATRIX & view, const XMMATRIX & projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView * texture_base, ID3D11ShaderResourceView * texture_normal, ID3D11ShaderResourceView * texture_metallic, ID3D11ShaderResourceView * texture_roughness, XMFLOAT3 mCol, float mMetallic, float mRoughness, bool useGGXDistribution, bool useGGXGeometry, bool renderReflections)
 {
 	ID3D11ShaderResourceView* texture_envCubemap = skybox;
 
@@ -100,7 +100,7 @@ void RenderObject::RenderObjectShader(ID3D11DeviceContext * deviceContext, XMMAT
 	MyBaseMesh* myMesh = (MyBaseMesh*)mesh;	// yeah, that's not safe but it's just so I don't have to edit framework class
 
 	myMesh->sendData(deviceContext);
-	objectShader->setShaderParameters(deviceContext, world, view, projection, cameraPosition, lights, directionalLight, texture_base, texture_normal, texture_metallic, texture_roughness, texture_envCubemap, shadowMapSize, dirShadowMapQuality, pointShadowMapQuality, mCol, mMetallic, mRoughness);
+	objectShader->setShaderParameters(deviceContext, world, view, projection, cameraPosition, lights, directionalLight, texture_base, texture_normal, texture_metallic, texture_roughness, texture_envCubemap, shadowMapSize, dirShadowMapQuality, pointShadowMapQuality, mCol, mMetallic, mRoughness, useGGXDistribution, useGGXGeometry);
 	objectShader->render(deviceContext, myMesh->getIndexCount());
 }
 
