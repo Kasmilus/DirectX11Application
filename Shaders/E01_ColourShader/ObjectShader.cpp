@@ -34,6 +34,7 @@ void ObjectShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	D3D11_BUFFER_DESC cameraBufferDesc;
 	D3D11_BUFFER_DESC lightBufferDesc;
 	D3D11_BUFFER_DESC shadowMapBufferDesc;
+	D3D11_BUFFER_DESC materialBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
 	D3D11_SAMPLER_DESC samplerComparisonDesc;
 
@@ -85,6 +86,17 @@ void ObjectShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&shadowMapBufferDesc, NULL, &shadowMapBuffer);
 
+	// Material buffer description
+	materialBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	materialBufferDesc.ByteWidth = sizeof(MaterialBufferType);
+	materialBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	materialBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	materialBufferDesc.MiscFlags = 0;
+	materialBufferDesc.StructureByteStride = 0;
+
+	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
+	renderer->CreateBuffer(&materialBufferDesc, NULL, &materialBuffer);
+
 	// Create a texture sampler state description.
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -124,7 +136,7 @@ void ObjectShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 }
 
 
-void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality)
+void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality, XMFLOAT3 mCol, float mMetallic, float mRoughness)
 {
 	HRESULT result;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -132,6 +144,7 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 	LightBufferType* lightDataPtr;
 	CameraBufferType* cameraDataPtr;
 	ShadowMapBufferType* shadowMapDataPtr;
+	MaterialBufferType* materialDataPtr;
 	unsigned int bufferNumber;
 	XMMATRIX tworld, tview, tproj, tLightViewMatrix, tLightProjectionMatrix;
 	ID3D11ShaderResourceView* shadowMaps[4] = { nullptr, nullptr, nullptr, nullptr };
@@ -214,6 +227,14 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 	deviceContext->Unmap(shadowMapBuffer, 0);
 	deviceContext->PSSetConstantBuffers(1, 1, &shadowMapBuffer);
 
+	result = deviceContext->Map(materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	materialDataPtr = (MaterialBufferType*)mappedResource.pData;
+	materialDataPtr->materialColour = XMFLOAT4(mCol.x, mCol.y, mCol.z, 1.0f);
+	materialDataPtr->materialMetallic = mMetallic;
+	materialDataPtr->materialRoughness = mRoughness;
+	deviceContext->Unmap(materialBuffer, 0);
+	deviceContext->PSSetConstantBuffers(2, 1, &materialBuffer);
+
 	// Set shader texture resource in the pixel shader.
 	deviceContext->PSSetShaderResources(0, 1, &texture_base);
 	deviceContext->PSSetShaderResources(1, 1, &texture_normal);
@@ -229,7 +250,6 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 		deviceContext->PSSetShaderResources(8, 1, &shadowMaps[2]);
 	if (shadowMaps[3])
 		deviceContext->PSSetShaderResources(9, 1, &shadowMaps[3]);
-
 }
 
 void ObjectShader::render(ID3D11DeviceContext* deviceContext, int indexCount)
@@ -241,6 +261,10 @@ void ObjectShader::render(ID3D11DeviceContext* deviceContext, int indexCount)
 
 	// Base render function.
 	MyBaseShader::render(deviceContext, indexCount);
+
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	for(int i=0; i < 10; ++i)
+		deviceContext->PSSetShaderResources(i, 1, &nullSRV);
 }
 
 

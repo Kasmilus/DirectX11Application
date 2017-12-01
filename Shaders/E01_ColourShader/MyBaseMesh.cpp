@@ -36,6 +36,7 @@ void MyBaseMesh::sendData(ID3D11DeviceContext* deviceContext)
 	stride = sizeof(VertexType);
 	offset = 0;
 
+	//deviceContext->IASetInputLayout()
 	deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
 	deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

@@ -54,6 +54,13 @@ public:
 		float directionalShadowMapQuality; // 0 - no shadows, 1 - hard shadows, 2 - soft shadows
 		float pointShadowMapQuality;
 	};
+	struct MaterialBufferType
+	{
+		XMFLOAT4 materialColour;
+		float materialRoughness;
+		float materialMetallic;
+		XMFLOAT2 padding;
+	};
 
 	DisplacementShader(ID3D11Device* device, HWND hwnd);
 	~DisplacementShader();
@@ -71,6 +78,7 @@ private:
 	ID3D11Buffer* lightBuffer;
 	ID3D11Buffer* cameraBuffer;
 	ID3D11Buffer* shadowMapBuffer;
+	ID3D11Buffer* materialBuffer;
 	ID3D11SamplerState* sampleState;
 	ID3D11SamplerState* sampleStateClampPoint;	// for sampling shadow map
 	ID3D11SamplerState* sampleStateComparison;	// for filtering shadows

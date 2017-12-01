@@ -125,6 +125,12 @@ private:
 	bool useVignette;
 	bool postProcessingOn = false;
 
+	// Material
+	XMFLOAT3 mCol;
+	float mMetallic;
+	float mRoughness;
+
+
 };
 
 #endif

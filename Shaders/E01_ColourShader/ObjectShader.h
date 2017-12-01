@@ -48,12 +48,19 @@ public:
 		float directionalShadowMapQuality; // 0 - no shadows, 1 - hard shadows, 2 - soft shadows
 		float pointShadowMapQuality;
 	};
+	struct MaterialBufferType
+	{
+		XMFLOAT4 materialColour;
+		float materialRoughness;
+		float materialMetallic;
+		XMFLOAT2 padding;
+	};
 
 	ObjectShader(ID3D11Device* device, HWND hwnd);
 	~ObjectShader();
 
 
-	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality);
+	void setShaderParameters(ID3D11DeviceContext* deviceContext, const XMMATRIX &world, const XMMATRIX &view, const XMMATRIX &projection, XMFLOAT3 cameraPosition, vector<MyLight*> lights, MyLight* directionalLight, ID3D11ShaderResourceView* texture_base, ID3D11ShaderResourceView* texture_normal, ID3D11ShaderResourceView* texture_metallic, ID3D11ShaderResourceView* texture_roughness, ID3D11ShaderResourceView* texture_envCubemap, XMFLOAT2 shadowMapSize, float dirShadowMapQuality, float pointShadowMapQuality, XMFLOAT3 mCol, float mMetallic, float mRoughness);
 	void render(ID3D11DeviceContext* deviceContext, int vertexCount);
 
 private:
@@ -64,6 +71,7 @@ private:
 	ID3D11Buffer* lightBuffer;
 	ID3D11Buffer* cameraBuffer;
 	ID3D11Buffer* shadowMapBuffer;
+	ID3D11Buffer* materialBuffer;
 	ID3D11SamplerState* sampleState;
 	ID3D11SamplerState* sampleStateClampPoint;	// for sampling shadow map
 	ID3D11SamplerState* sampleStateComparison;	// for filtering shadows

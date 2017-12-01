@@ -39,6 +39,10 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	shadowMapSize = XMFLOAT2(1024, 1024);
 	dirShadowMapQuality = 2;
 	pointShadowMapQuality = 2;
+	// material
+	mCol = XMFLOAT3(0, 0, 0);
+	mRoughness = 0;
+	mMetallic = 0;
 
 	// TEXTURES
 	textureMgr->loadTexture("object_base", L"../res/PBR/RustedIron/rustediron-streaks_basecolor.png");
@@ -107,7 +111,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	light3->SetIsActive(false);
 	lights.push_back(light3);
 	MyLight* light4 = new MyLight(renderer);
-	light4->setDiffuseColour(8.0f, 8.0f, 0.0f, 1.0f);
+	light4->setDiffuseColour(4.0f, 4.0f, 0.0f, 1.0f);
 	light4->setPosition(2, 4.0f, 1);
 	light4->SetRadius(5);
 	light4->SetAttenuation(1, 0.3f, 0);
@@ -390,9 +394,9 @@ void App1::renderSceneToTexture()
 void App1::renderScene(XMMATRIX &world, XMMATRIX &view, XMMATRIX &projection, bool renderReflection)
 {
 	// Render dwarf
-	dwarf->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), renderReflection);
+	dwarf->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), mCol, mMetallic, mRoughness, renderReflection);
 	// Render sphere
-	sphere->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), renderReflection);
+	sphere->RenderObjectShader(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("object_base"), textureMgr->getTexture("object_normal"), textureMgr->getTexture("object_metallic"), textureMgr->getTexture("object_roughness"), mCol, mMetallic, mRoughness, renderReflection);
 	// Render floor
 	floor->RenderDisplacement(renderer->getDeviceContext(), world, view, projection, camera->getPosition(), lights, directionalLight, textureMgr->getTexture("brick_base"), textureMgr->getTexture("brick_normal"), textureMgr->getTexture("brick_metallic"), textureMgr->getTexture("brick_roughness"), textureMgr->getTexture("brick_height"), textureMgr->getTexture("skybox"));
 	// Render grass
@@ -462,22 +466,44 @@ void App1::gui()
 		renderer->setWireframeMode(!renderer->getWireframeState());
 	}
 	// Controls
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
 	ImGui::Text("Keyboard controls: \n");
 	ImGui::BulletText("	Move camera: WSAD\n");
 	ImGui::BulletText("	Move sphere: TGFH\n");
 	ImGui::BulletText("	Move point light: IKJL\n");
 	// Dynamic reflections
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
 	ImGui::Text("Dynamic reflections:");
-	ImGui::Checkbox("Dwarf", &dwarf->dynamicReflection);
-	ImGui::SameLine();
 	ImGui::Checkbox("Sphere", &sphere->dynamicReflection);
+	ImGui::SameLine();
+	ImGui::Checkbox("Dwarf", &dwarf->dynamicReflection);
+	// Material properties
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
+	ImGui::Text("Sphere and dwarf material(used on top of textures):");
+	float c[3] = { mCol.x,mCol.y,mCol.z };
+	ImGui::ColorEdit3("Colour###cc", c);
+	mCol = XMFLOAT3(c[0], c[1], c[2]);
+	ImGui::SliderFloat("Roughness", &mRoughness, -1.0f, 1.0f);
+	ImGui::SliderFloat("Metallic", &mMetallic, -1.0f, 1.0f);
 	// Tesselation
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
 	ImGui::Text("Floor tessellation:");
 	ImGui::SliderFloat("Min distance", &minTessDist, 20.0f, 100.0f, "%.1f");
 	ImGui::SliderFloat("Max distance", &maxTessDist, 1.0f, 20.0f, "%.1f");
 	ImGui::SliderFloat("Min factor", &minTessFactor, 1.0f, 4.0f, "%.1f");
 	ImGui::SliderFloat("Max factor", &maxTessFactor, 4.0f, 8.0f, "%.1f");
 	// Shadows quality
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
 	ImGui::Text("Shadow maps:");
 	ImGui::Text("Size:");
 	if (ImGui::Button("256x256"))
@@ -517,10 +543,16 @@ void App1::gui()
 	if (ImGui::Button("Soft##Soft1"))
 		pointShadowMapQuality = 2;
 	// Wind
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
 	ImGui::Text("Grass wind:");
 	ImGui::SliderFloat("Frequency", &windFreq, 0.1f, 1.5f, "%.2f");
 	ImGui::SliderFloat("Strength", &windStrength, 0.1f, 1.0f, "%.2f");
 	// Post processing
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
 	if (ImGui::Button("Toggle post-processing effects"))
 	{
 		postProcessingOn = !postProcessingOn;
@@ -535,6 +567,10 @@ void App1::gui()
 	}
 	// Lights
 	// Dir light
+	ImGui::NewLine();
+	ImGui::Separator();
+	ImGui::NewLine();
+
 	ImVec4 col = ImVec4(directionalLight->getDiffuseColour().x, directionalLight->getDiffuseColour().y, directionalLight->getDiffuseColour().z, 1);
 	bool isActive = directionalLight->IsActive();
 	ImGui::Text("Directional light");
@@ -566,7 +602,8 @@ void App1::gui()
 		l->SetAttenuation(atten[0], atten[1], atten[2]);
 		l->SetIsActive(isActive);
 	}
-
+	ImGui::NewLine();
+	ImGui::Separator();
 	UpdateShaderQualityParams();
 
 	// Render UI

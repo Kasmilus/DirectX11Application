@@ -16,7 +16,15 @@ TextureCube shadowMapTexture[4] : register(t6);
 //TextureCube shadowMapTexture3 : register(t9);
 SamplerState SampleType : register(s0);
 SamplerState SampleTypeClampPoint : register(s1);
-SamplerComparisonState SampleTypeComparison : register(s2);
+//SamplerComparisonState SampleTypeComparison : register(s2);
+SamplerComparisonState SampleTypeComparison : register(s2)
+{
+    Filter = COMPARISON_MIN_MAG_MIP_LINEAR;
+    AddressU = Clamp;
+    AddressV = Clamp;
+
+    ComparisonFunc = LESS;
+};
 SamplerState SampleTypeCubemap : register(s3);
 
 struct PointLight
@@ -43,6 +51,12 @@ cbuffer ShadowMapBuffer : register(cb1)
     float2 shadowMapSize;
     float directionalShadowMapQuality; // 0 - no shadows, 1 - hard shadows, 2 - soft shadows
     float pointShadowMapQuality;
+};
+cbuffer MaterialBuffer : register(cb2)
+{
+    float4 materialColour;
+    float materialRoughness;
+    float materialMetallic;
 };
 
 // Input
@@ -133,7 +147,10 @@ float3 CookTorrance(float3 materialDiffuseColor,
 	// indices of refraction between air and shader object
     float ior = 0.1f;
     const float k = 0.1f; // error correction - isn't in formula but I added it to get rid of some problems appearing at low angles
-
+    materialDiffuseColor += materialColour;
+    materialDiffuseColor = saturate(materialDiffuseColor);
+    roughness += materialRoughness;
+    metallic += materialMetallic;
 	// Calculating specular component
     float lightDirAngle = saturate(dot(normal, lightDir)) + k / 100;
     float3 Kd = 1.0f; // Ammount of light that is diffused

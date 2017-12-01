@@ -322,7 +322,7 @@ void MyBaseShader::render(ID3D11DeviceContext* deviceContext, int indexCount)
 {
 	// Set the vertex input layout.
 	deviceContext->IASetInputLayout(layout);
-
+	
 	// Set the vertex and pixel shaders that will be used to render.
 	deviceContext->VSSetShader(vertexShader, NULL, 0);
 	deviceContext->PSSetShader(pixelShader, NULL, 0);
@@ -351,4 +351,10 @@ void MyBaseShader::render(ID3D11DeviceContext* deviceContext, int indexCount)
 
 	// Render the triangle.
 	deviceContext->DrawIndexed(indexCount, 0, 0);
+
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	for (int i = 0; i < 10; ++i)
+		deviceContext->PSSetShaderResources(i, 1, &nullSRV);
+	for (int i = 0; i < 10; ++i)
+		deviceContext->VSSetShaderResources(i, 1, &nullSRV);
 }

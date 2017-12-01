@@ -40,8 +40,6 @@ void Model::initBuffers(ID3D11Device* device)
 		vertices[i].position = XMFLOAT3(model[i].x, model[i].y, -model[i].z);
 		vertices[i].texture = XMFLOAT2(model[i].tu, model[i].tv);
 		vertices[i].normal = XMFLOAT3(model[i].nx, model[i].ny, -model[i].nz);
-		vertices[i].tangent = XMFLOAT3(model[i].tx, model[i].ty, -model[i].tz);
-		vertices[i].binormal = XMFLOAT3(model[i].bx, model[i].by, -model[i].bz);
 
 		indices[i] = i;
 	}

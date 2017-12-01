@@ -57,6 +57,7 @@ void DisplacementShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	D3D11_BUFFER_DESC cameraBufferDesc;
 	D3D11_BUFFER_DESC lightBufferDesc;
 	D3D11_BUFFER_DESC shadowMapBufferDesc;
+	D3D11_BUFFER_DESC materialBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
 	D3D11_SAMPLER_DESC samplerComparisonDesc;
 
@@ -105,6 +106,14 @@ void DisplacementShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	shadowMapBufferDesc.MiscFlags = 0;
 	shadowMapBufferDesc.StructureByteStride = 0;
 	renderer->CreateBuffer(&shadowMapBufferDesc, NULL, &shadowMapBuffer);
+	// --- MATERIAL --- //
+	materialBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	materialBufferDesc.ByteWidth = sizeof(MaterialBufferType);
+	materialBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	materialBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	materialBufferDesc.MiscFlags = 0;
+	materialBufferDesc.StructureByteStride = 0;
+	renderer->CreateBuffer(&materialBufferDesc, NULL, &materialBuffer);
 
 	// --- SAMPLERS --- //
 	// Regular
@@ -157,6 +166,7 @@ void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 	TessellationBufferType* tessellationPtr;
 	LightBufferType* lightDataPtr;
 	ShadowMapBufferType* shadowMapDataPtr;
+	MaterialBufferType* materialDataPtr;;
 	XMMATRIX tworld, tview, tproj, tLightViewMatrix, tLightProjectionMatrix;
 	ID3D11ShaderResourceView* shadowMaps[4] = { nullptr, nullptr, nullptr, nullptr };
 	ID3D11ShaderResourceView* directionalShadowMap = directionalLight->GetShadowResourceView();
@@ -226,6 +236,14 @@ void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 	shadowMapDataPtr->pointShadowMapQuality = pointShadowMapQuality;
 	deviceContext->Unmap(shadowMapBuffer, 0);
 
+	// Material
+	result = deviceContext->Map(materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	materialDataPtr = (MaterialBufferType*)mappedResource.pData;
+	materialDataPtr->materialColour = XMFLOAT4(0,0,0,0);
+	materialDataPtr->materialMetallic = 0;
+	materialDataPtr->materialRoughness = 0;
+	deviceContext->Unmap(materialBuffer, 0);
+
 	// --- VERTEX SHADER --- //
 	deviceContext->VSSetConstantBuffers(0, 1, &matrixBuffer);
 	deviceContext->VSSetConstantBuffers(1, 1, &tessellationBuffer);
@@ -243,6 +261,7 @@ void DisplacementShader::setShaderParameters(ID3D11DeviceContext* deviceContext,
 
 	deviceContext->PSSetConstantBuffers(0, 1, &lightBuffer);
 	deviceContext->PSSetConstantBuffers(1, 1, &shadowMapBuffer);
+	deviceContext->PSSetConstantBuffers(2, 1, &materialBuffer);
 
 
 	// Set shader texture resource in the pixel shader.
@@ -272,6 +291,11 @@ void DisplacementShader::render(ID3D11DeviceContext* deviceContext, int indexCou
 
 	// Base render function.
 	BaseShader::render(deviceContext, indexCount);
+
+	// Unbind all resources(
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	for (int i = 0; i < 10; ++i)
+		deviceContext->PSSetShaderResources(i, 1, &nullSRV);
 }
 
 

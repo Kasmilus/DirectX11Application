@@ -24,7 +24,6 @@ float4 main(InputType input) : SV_TARGET
 	// Get depth of the pixel, subtract from 1 for better precision on long distances
     float depth = 1 - (input.depthPosition.z / input.depthPosition.w);
     float depthInv = (input.depthPosition.z / input.depthPosition.w);
-    depth = saturate(depth);
 	// Logarythmic z-buffer
     //depth = 1 - (log(1 * input.depthPosition.z + 1) / log(1 * input.depthPosition.w + 1) * input.depthPosition.z * 0.1f);
 
