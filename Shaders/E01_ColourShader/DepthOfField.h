@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-	Shader applying depth of field and vignette effects
+	Shader applying depth of field, bw and vignette effects
 */
 
 #include "../DXFramework/BaseShader.h"

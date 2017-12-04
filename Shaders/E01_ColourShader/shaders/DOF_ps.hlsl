@@ -1,5 +1,6 @@
 /*
 	Depth of field blur - interpolate between scene texture without blur and the one with blur depending on values stored in DOF depth map
+I didn't change name of the shader but it's actually doing all post processing effects(DOF, desaturate, vignette)
 */
 Texture2D sceneTexture : register(t0);
 Texture2D depthTexture : register(t1);

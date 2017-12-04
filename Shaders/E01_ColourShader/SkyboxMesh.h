@@ -1,5 +1,7 @@
 #pragma once
 
+// Render only inside faces
+
 #include "../DXFramework/BaseMesh.h"
 
 using namespace DirectX;

@@ -2,7 +2,7 @@
 
 // R channel - regular depth, 0(closer to camera) - 1(further from camera)
 // G channel - focus point for depth of field blurring
-// B channel - 
+// B channel - depth
 
 cbuffer DOFBuffer : register(cb0)
 {

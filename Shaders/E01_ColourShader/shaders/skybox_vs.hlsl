@@ -1,7 +1,5 @@
 // skybox vertex shader
 
-
-
 cbuffer MatrixBuffer : register(cb0)
 {
 	matrix worldMatrix;
@@ -40,7 +38,6 @@ OutputType main(InputType input)
 	
 	// Store the texture coordinates for the pixel shader.
 	output.tex = input.position.xyz;
-	//output.tex = float3(0.5,0.5,0.5);
 
 	return output;
 }

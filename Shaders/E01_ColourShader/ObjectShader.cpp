@@ -42,68 +42,50 @@ void ObjectShader::initShader(WCHAR* vsFilename, WCHAR* psFilename)
 	loadVertexShader(vsFilename);
 	loadPixelShader(psFilename);
 
-	// Setup the description of the dynamic matrix constant buffer that is in the vertex shader.
+	// --- MATRIX --- //
 	matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	matrixBufferDesc.ByteWidth = sizeof(MatrixBufferType);
 	matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	matrixBufferDesc.MiscFlags = 0;
 	matrixBufferDesc.StructureByteStride = 0;
-
-	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&matrixBufferDesc, NULL, &matrixBuffer);
 
-	// Camera buffer description
+	// --- CAMERA --- //
 	cameraBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	cameraBufferDesc.ByteWidth = sizeof(CameraBufferType);
 	cameraBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	cameraBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	cameraBufferDesc.MiscFlags = 0;
 	cameraBufferDesc.StructureByteStride = 0;
-
-	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&cameraBufferDesc, NULL, &cameraBuffer);
 
-	// Light buffer description
+	// --- LIGHT --- //
 	lightBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	lightBufferDesc.ByteWidth = sizeof(LightBufferType);
 	lightBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	lightBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	lightBufferDesc.MiscFlags = 0;
 	lightBufferDesc.StructureByteStride = 0;
-
-	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&lightBufferDesc, NULL, &lightBuffer);
 
-	// Shadow map buffer description
+	// --- SHADOW MAP --- //
 	shadowMapBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	shadowMapBufferDesc.ByteWidth = sizeof(ShadowMapBufferType);
 	shadowMapBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	shadowMapBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	shadowMapBufferDesc.MiscFlags = 0;
 	shadowMapBufferDesc.StructureByteStride = 0;
-
-	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&shadowMapBufferDesc, NULL, &shadowMapBuffer);
 
-	// Material buffer description
+	// --- MATERIAL --- //
 	materialBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	materialBufferDesc.ByteWidth = sizeof(MaterialBufferType);
 	materialBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	materialBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	materialBufferDesc.MiscFlags = 0;
 	materialBufferDesc.StructureByteStride = 0;
-
-	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	renderer->CreateBuffer(&materialBufferDesc, NULL, &materialBuffer);
-
-	// Create a texture sampler state description.
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-
-	// Create the texture sampler state.
-	renderer->CreateSamplerState(&samplerDesc, &sampleState);
 
 	// --- SAMPLERS --- //
 	// Regular
@@ -158,34 +140,21 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 	tLightProjectionMatrix = XMMatrixTranspose(directionalLight->getProjectionMatrix());
 
 	// ----- VERTEX SHADER ----- //
-
-	// Lock the constant buffer so it can be written to.
+	// Matrix
 	result = deviceContext->Map(matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-
-	// Get a pointer to the data in the constant buffer.
 	matrixDataPtr = (MatrixBufferType*)mappedResource.pData;
-
-	// Copy the matrices into the constant buffer.
 	matrixDataPtr->world = tworld;// worldMatrix;
 	matrixDataPtr->view = tview;
 	matrixDataPtr->projection = tproj;
-
-	// Unlock the constant buffer.
 	deviceContext->Unmap(matrixBuffer, 0);
-
-	// Set the position of the constant buffer in the vertex shader.
-	bufferNumber = 0;
-
-	// Now set the constant buffer in the vertex shader with the updated values.
-	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &matrixBuffer);
+	deviceContext->VSSetConstantBuffers(0, 1, &matrixBuffer);
 
 	// Camera
 	result = deviceContext->Map(cameraBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	cameraDataPtr = (CameraBufferType*)mappedResource.pData;
 	cameraDataPtr->position = cameraPosition;
 	deviceContext->Unmap(cameraBuffer, 0);
-	bufferNumber++;
-	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &cameraBuffer);
+	deviceContext->VSSetConstantBuffers(1, 1, &cameraBuffer);
 
 	// ----- PIXEL SHADER ----- //
 
@@ -227,6 +196,7 @@ void ObjectShader::setShaderParameters(ID3D11DeviceContext* deviceContext, const
 	deviceContext->Unmap(shadowMapBuffer, 0);
 	deviceContext->PSSetConstantBuffers(1, 1, &shadowMapBuffer);
 
+	// Material
 	result = deviceContext->Map(materialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	materialDataPtr = (MaterialBufferType*)mappedResource.pData;
 	materialDataPtr->materialColour = XMFLOAT4(mCol.x, mCol.y, mCol.z, 1.0f);

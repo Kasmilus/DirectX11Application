@@ -1,6 +1,5 @@
 // Tessellation vertex shader.
-// Doesn't do much, could manipulate the control points
-// Pass forward data, strip out some values not required for example.
+// Calculates tess factor based on distance from the camera
 
 cbuffer MatrixBuffer : register(cb0)
 {
@@ -46,11 +45,9 @@ OutputType main(InputType input)
 {
     OutputType output;
 
-	// transform to world space - needed to correctly calculate distance
+	// Transform to world space - needed to correctly calculate distance
 	input.position.w = 1.0f;
 	output.position = mul(input.position, worldMatrix);
-	//output.position = mul(output.position, viewMatrix);
-	//output.position = mul(output.position, projectionMatrix);
 	float dist = distance(output.position.xyz, cameraPosition);
 
 	 // Pass the vertex position into the hull shader.
@@ -60,8 +57,7 @@ OutputType main(InputType input)
 	output.tex = input.tex;
 
 	// Calculate tesselation factor based on distance
-	// it's simple heuristic which suits my needs as it's used on mesh which has evenly sized triangles
-	// otherwise I'd determine tessellation factor based on screen size of the triangle
+	// Even dividing by zero doesn't break anything, Yay! :D
 	float tess = saturate( (dist - minTesselationDistance) / (maxTesselationDistance - minTesselationDistance) );	// Normalized distance based on min and max tesselation distance
 	output.tesselationFactor = minTesselationFactor + tess * maxTesselationFactor;
 	output.tesselationFactor = clamp(output.tesselationFactor, 1, 64);

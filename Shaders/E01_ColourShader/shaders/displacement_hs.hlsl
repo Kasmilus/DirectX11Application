@@ -43,7 +43,7 @@ ConstantOutputType PatchConstantFunction(InputPatch<InputType, 3> inputPatch, ui
 
 
 [domain("tri")]
-[partitioning("fractional_odd")]
+[partitioning("fractional_odd")]    // Fractional so it smoothly interpolates between different tess values when camera moves
 [outputtopology("triangle_cw")]
 [outputcontrolpoints(3)]
 [patchconstantfunc("PatchConstantFunction")]

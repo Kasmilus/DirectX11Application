@@ -1,5 +1,4 @@
-// Lab1.cpp
-// Lab 1 example, simple coloured triangle mesh
+// 
 #include "App1.h"
 
 App1::App1()
@@ -129,9 +128,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	blurTextureUpSampled = new RenderTexture(renderer->getDevice(), screenWidth, screenHeight, SCREEN_NEAR, SCREEN_DEPTH);
 	DOFTexture = new RenderTexture(renderer->getDevice(), screenWidth, screenHeight, SCREEN_NEAR, SCREEN_DEPTH);
 
-	// ortho size and position set based on window size
-	// 200x200 pixels (standard would be matching window size for fullscreen mesh
-	// Position default at 0x0 centre window, to offset change values (pixel)
+	// Shaders
 	orthoMesh = new OrthoMesh(renderer->getDevice(), renderer->getDeviceContext(), 1024, 576, 0, 0);
 	colourShader = new ColourShader(renderer->getDevice(), hwnd);
 	depthShader = new DepthShader(renderer->getDevice(), hwnd);

@@ -1,7 +1,7 @@
 #pragma once
 
 /*
-	just like base shader but is loading also tangent and binormal vectors into the vertex shader
+	Just like base shader but is loading also tangent and binormal vectors into the vertex shader
 */
 
 #include "../DXFramework/DXF.h"

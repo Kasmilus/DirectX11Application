@@ -1,4 +1,4 @@
-// 
+// Renders given texture 
 Texture2D renderTexture : register(t0);
 SamplerState sampleType : register(s0);
 

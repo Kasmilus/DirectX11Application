@@ -1,5 +1,5 @@
 #include "MyModelMesh.h"
-// load model datat, initialise buffers (with model data) and load texture.
+// load model data, initialise buffers (with model data) and load texture.
 MyModelMesh::MyModelMesh(ID3D11Device* device, ID3D11DeviceContext* deviceContext, char* filename)
 {
 	loadModel(filename);
@@ -218,7 +218,6 @@ void MyModelMesh::calculateTangentAndBinormal(ModelType vertex1, ModelType verte
 	float tuVector[2], tvVector[2];
 	float den;
 	float length;
-
 
 	// Calculate the two vectors for this face.
 	vector1[0] = vertex2.x - vertex1.x;

@@ -1,5 +1,5 @@
 // Depth Tessellation domain shader
-// After tessellation the domain shader processes the all the vertices
+// After tessellation the domain shader processes all of the vertices
 
 Texture2D displacementTexture : register(t0);
 SamplerState SampleType : register(s0);

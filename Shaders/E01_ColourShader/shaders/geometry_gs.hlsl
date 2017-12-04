@@ -1,4 +1,5 @@
-// Gaussian blur shader
+// Geometry shader
+// It's generating grass
 
 Texture2D noiseLength : register(t0);
 Texture2D noiseWind : register(t1);
@@ -34,7 +35,7 @@ struct OutputType
 	float3 normal : NORMAL;
 };
 
-[maxvertexcount(98)]
+[maxvertexcount(98)] // 3 vertices in each triangle * 2 triangles for a quad * 2 sides of a strand * 8 parts of each strand
 void main(triangle InputType input[3], inout TriangleStream<OutputType> triStream)
 {
 	OutputType output;
@@ -59,17 +60,18 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 	float4 N1 = float4(input[0].normal, 0);
 
 	// Strand variables
-	float4 P = (P1 + P2 + P3) / 3.0f;	// Get position in between all vertices
-	float4 N = N1;	// I'm using a plane so all normals are pointing the same direction
+	float4 P = (P1 + P2 + P3) / 3.0f;	// Get position in between all received vertices
+	float4 N = N1;	// I'm using a plane so all normals are pointing in the same direction, should be changed if used with different meshes
 	float2 T = (T1 + T2 + T3) / 3.0f;
-	float4 Dir = float4((P2 - P1).xyz, 0.0f);	// Decide on direction
+	float4 Dir = float4((P2 - P1).xyz, 0.0f);	// Decide on sideways direction(where width grows), doesn't really matter so pick one side of the triangle
 	Dir = normalize(Dir);
    
-	float3 lengthDir = noiseLength.SampleLevel(sampleType, T, 0).xyz;
-	float3 windDir = noiseWind.SampleLevel(sampleType, T * sin(time * windFreq/10), 0).xyz;
+    // Sample maps
+	float3 lengthDir = noiseLength.SampleLevel(sampleType, T, 0).xyz;   // Length of the strand based on the texture so it looks natural
+	float3 windDir = noiseWind.SampleLevel(sampleType, T * sin(time * windFreq/10), 0).xyz; // Sample point based on time so it looks like wind
 	windDir = normalize(windDir);
 
-	// Randomization
+	// Length randomization
 	Length = Length + lengthDir.z * LengthIntensity;
 	lengthDir = (lengthDir * 2) - 1;
 	lengthDir *= DirectionIntensity;
@@ -144,7 +146,7 @@ void main(triangle InputType input[3], inout TriangleStream<OutputType> triStrea
 		triStream.RestartStrip();
 
 		// 2
-        if(i != PARTS-1)
+        if (i != PARTS - 1)    // Just a triangle on top, no need to make second one(is that really an optimisation or checking each time makes it slower?)
         {
         
             output.position = OP1;

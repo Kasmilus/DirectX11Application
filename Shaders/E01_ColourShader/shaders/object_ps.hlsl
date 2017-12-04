@@ -17,7 +17,7 @@ TextureCube shadowMapTexture[4] : register(t6);
 SamplerState SampleType : register(s0);
 SamplerState SampleTypeClampPoint : register(s1);
 //SamplerComparisonState SampleTypeComparison : register(s2);
-SamplerComparisonState SampleTypeComparison : register(s2)
+SamplerComparisonState SampleTypeComparison : register(s2)  // for some reason creating comparison shader on cpu returns null? make it here instead
 {
     Filter = COMPARISON_MIN_MAG_MIP_LINEAR;
     AddressU = Clamp;
@@ -147,13 +147,13 @@ float3 CookTorrance(float3 materialDiffuseColor,
 	float metallic)
 {
 	// indices of refraction between air and shader object
-    float ior = 0.1f;
+    float ior = 0.1f;   // Factor defining how light behaves when it goes from one medium to another
     float k = 0.1f; // error correction - isn't in formula but I added it to get rid of some problems appearing at low angles
     if (distributionFunction == 1)
         k = 0;
     materialDiffuseColor += materialColour;
     materialDiffuseColor = saturate(materialDiffuseColor);
-    roughness += materialRoughness;
+    roughness += materialRoughness; // Yeah, I'm not clamping it, just because results are interesting when it goes out of range ^^
     metallic += materialMetallic;
 	// Calculating specular component
     float lightDirAngle = saturate(dot(normal, lightDir)) + k / 100;
@@ -191,11 +191,10 @@ float3 CookTorrance(float3 materialDiffuseColor,
         Ks = (D * F * G) / (PI * lightDirAngle * clamp(viewDirAngle, k, 1 - k));
 		// Law of energy conservation, don't allow to reflect more light than comes in
         Kd = (1 - Ks);
-
     }
 
-
 	// Calculate irradiance, this is simplified model using the same cubemap for both(spec and diff) components
+    // Considering this simplified formula and that env cubemap isn't edited in any way, the reflection isn't going to be very realistic 
     float3 envColor = cubemapTexture.Sample(SampleTypeCubemap, normal).xyz;
     float3 irradiance = envColor * saturate(metallic - roughness) + envColor * roughness;
 
@@ -263,7 +262,6 @@ float CalculateShadow(float4 lightViewPosition, Texture2D shadowMap)
 
     if (directionalShadowMapQuality == 1)
     {
-        // Something is wrong here, I can compare -999999 or 99999 instead of lightDepthValue and it doesn't make any difference
         return shadowMap.SampleCmp(SampleTypeComparison, uv, lightDepthValue);
     }
     else
@@ -281,7 +279,7 @@ float PercentageCloseFilterCubemap(float3 uvz, float3 offset, float lightDepthVa
 {
     float sum = 0.0f;
     const float PCF_STEP = 3;
-    const float PCF_SUM = 343; //(PCF_STEP * 2 + 1)^3
+    const float PCF_SUM = 343; //(PCF_STEP * 2 + 1)^3 - way too much, not very good idea, should be optimised
 
     for (int y = -PCF_STEP; y <= PCF_STEP; y++)
     {
@@ -300,6 +298,7 @@ float PercentageCloseFilterCubemap(float3 uvz, float3 offset, float lightDepthVa
 }
 
 // Borrowed from the internet but forgot where from :(
+// Converts float3 into clip space, needed to correctly sample from cubemap
 float ConvertDistToClipSpace(float3 lightDir_ws)
 {
     float3 AbsVec = abs(lightDir_ws);
@@ -352,7 +351,7 @@ float4 main(InputType input) : SV_TARGET
     Texture2D textureNormal = normalTexture;
     Texture2D textureMetallic = metallicTexture;
     Texture2D textureRoughness = roughnessTexture;
-	// Textures samples for this fragment
+	// Texture samples for this fragment
     float4 baseColour = textureBase.Sample(SampleType, input.tex);
     float3 normalSample = textureNormal.Sample(SampleType, input.tex).rgb;
     float roughness = textureRoughness.Sample(SampleType, input.tex).r;
@@ -363,27 +362,22 @@ float4 main(InputType input) : SV_TARGET
     float4 ambientColour = float4(0, 0, 0, 0);
     float4 lightingColour = float4(0, 0, 0, 0);
 	// Shadows
-	
     float shadow = 0.0f;
 
     // ----- NORMAL MAPPING ----- //
-			// Move normal sample into the range of [-1, 1]
+	// Move normal sample into the range of [-1, 1]
     normalSample = (normalSample * 2.0f) - 1.0f;
-			// Calculate normal for this fragment
+	// Calculate normal for this fragment
     float3 normal = (normalSample.x * input.tangent) + (normalSample.y * input.binormal) + (normalSample.z * input.normal);
-			//normal = normalSample;
     normal = normalize(normal);
-    //normal = input.normal;
 	// ----- NORMAL MAPPING ----- //
 
+	// ----- SHADOWS ----- //
     shadow = CalculateShadow(input.lightViewPosition, shadowMapTextureDirectional);
-    
-	// ----- LIGHTING ----- //
-    // Point light
-   // float3 lightDir = lightPosition - input.viewDirection;
-    float3 lightDir = normalize(-lightDirection);
+    // ----- SHADOWS ----- //
 
-	// Final colour calculations
+	// ----- LIGHTING ----- //
+    float3 lightDir = normalize(-lightDirection);
 
     ambientColour = saturate(baseColour * lightAmbientColour);
 
@@ -394,6 +388,7 @@ float4 main(InputType input) : SV_TARGET
         lightingColour *= shadow;
     }
 
+    // Point lights
     for (int i = 0; i < 4; ++i)
     {
         if (pointLight[i].isActive != 0)
@@ -414,59 +409,15 @@ float4 main(InputType input) : SV_TARGET
             }
         }
     }
+
     colour = saturate(lightingColour + ambientColour);
-	//colour = saturate(lightingColour + ambientColour);
+
+    // Testing:
 	//colour = float4(depthValue, depthValue, depthValue, 1);
 	//colour = specular;
 	//colour = float4(normal, 1);
 	//colour = float4(input.tex, 0, 1);
 	//colour = float4(input.tangent, 1.0f);
-   // colour = shadow;
+    //colour = shadow;
     return colour;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-			/*
-
-			BLINN PHONG
-
-			float3 lightDir = input.viewDirection - lightPosition;
-			float3 halfVector = normalize(lightDir + input.viewDirection);
-			lightIntensity = saturate(dot(normal, halfVector));
-
-			
-			//lightIntensity = 1;	// testing shadows
-
-			specular = 0;
-			if (lightIntensity > 0)
-			{
-				// Calculate the reflection vector based on the light intensity, normal vector, and light direction.
-				float3 reflection = normalize(2 * lightIntensity * normal + lightPosition);
-
-				// Determine the amount of specular light based on the reflection vector, viewing direction, and specular power.
-				float specularPower = 10;	// That should come from light
-				specular = pow(saturate(dot(reflection, input.viewDirection)), specularPower);
-			}
-			*/

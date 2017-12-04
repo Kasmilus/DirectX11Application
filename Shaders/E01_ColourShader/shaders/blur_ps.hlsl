@@ -35,7 +35,6 @@ float4 main(InputType input) : SV_TARGET
 	float weight3 = 0.006206f;
 
 	// Get pixel colour
-	
 	colour = shaderTexture.Sample(SampleType, input.tex) * weight0;
 
 

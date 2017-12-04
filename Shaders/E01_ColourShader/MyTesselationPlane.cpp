@@ -14,7 +14,7 @@ MyTesselationPlane::~MyTesselationPlane()
 	MyBaseMesh::~MyBaseMesh();
 }
 
-// Generate plane (including texture coordinates and normals).
+// Generate plane (including texture coordinates and normals)
 void MyTesselationPlane::initBuffers(ID3D11Device* device)
 {
 	VertexType* vertices;

@@ -1,4 +1,4 @@
-// skybox pixel/fragment shader
+// skybox fragment shader
 
 TextureCube shaderTexture : register(t0);
 SamplerState SampleType : register(s0);
